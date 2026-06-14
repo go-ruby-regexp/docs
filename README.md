@@ -1,3 +1,5 @@
+<p align="center"><img src="https://raw.githubusercontent.com/go-onigmo/brand/main/social/go-onigmo.png" alt="go-onigmo/docs" width="720"></p>
+
 # go-onigmo/docs
 
 Versioned documentation for [go-onigmo](https://github.com/go-onigmo),

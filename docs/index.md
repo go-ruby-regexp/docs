@@ -17,10 +17,12 @@ also the regexp backend for [go-embedded-ruby](https://github.com/go-embedded-ru
 where a thin adapter maps Ruby's `Regexp`/`MatchData` onto this engine. The
 module path is `github.com/go-onigmo/regexp`.
 
-!!! note "Status: planning"
-    The engine is in the planning stage — there is no Go code yet. These pages
-    describe the design from the implementation plan; the
-    [Roadmap](roadmap.md) tracks the phases.
+!!! success "Status: Phases 0 and 1 implemented"
+    The engine runs: a greedy backtracking VM with leftmost-first semantics —
+    literals/escapes, `.`, character classes, anchors, greedy quantifiers,
+    groups, alternation, **named groups `(?<name>…)` and backreferences
+    `\1` / `\k<name>`** — differential-tested against MRI, 100% coverage, CI
+    green across 6 arches. The [Roadmap](roadmap.md) tracks the remaining phases.
 
 ## Repositories
 
