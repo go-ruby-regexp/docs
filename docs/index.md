@@ -17,12 +17,22 @@ also the regexp backend for [go-embedded-ruby](https://github.com/go-embedded-ru
 where a thin adapter maps Ruby's `Regexp`/`MatchData` onto this engine. The
 module path is `github.com/go-onigmo/regexp`.
 
-!!! success "Status: Phases 0 and 1 implemented"
-    The engine runs: a greedy backtracking VM with leftmost-first semantics —
-    literals/escapes, `.`, character classes, anchors, greedy quantifiers,
-    groups, alternation, **named groups `(?<name>…)` and backreferences
-    `\1` / `\k<name>`** — differential-tested against MRI, 100% coverage, CI
-    green across 6 arches. The [Roadmap](roadmap.md) tracks the remaining phases.
+!!! success "Status: Phases 0–4 complete — the engine roadmap is done"
+    The standalone engine roadmap (Phases 0–4) is **complete**: a backtracking VM
+    with leftmost-first semantics covering literals/escapes, `.`, character
+    classes (incl. POSIX `[[:alpha:]]` and multibyte members `[é]` / `[à-ï]`),
+    anchors, **every quantifier mode** (greedy, lazy, possessive `*+ ++ ?+`,
+    atomic groups `(?>…)`), capturing/non-capturing/named groups, alternation,
+    **backreferences `\1` / `\k<name>`**, **lookahead and fixed/bounded-width
+    lookbehind**, `\G`, **recursive subexpression calls `\g<…>`**, inline flags
+    `(?imx)`, **`\p{…}` Unicode properties**, rune-level `/i` case folding, `\h` /
+    `\H`, `\R`, and **UTF-8 / ASCII-8BIT multi-encoding** with a char-advancing
+    `.`. ReDoS-hardened (memoization + step budget + recursion cap +
+    `WithTimeout`) with a **start-position / interior-literal optimizer**
+    (up to ~210× faster) and a benchmark suite — differential-tested against MRI,
+    100% coverage, CI green across 6 arches. The [Roadmap](roadmap.md) records the
+    documented out-of-scope boundaries; Phase 5 (the Ruby surface) is downstream
+    in the go-embedded-ruby adapter, not in this engine module.
 
 ## Repositories
 
