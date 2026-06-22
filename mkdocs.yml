@@ -1,8 +1,8 @@
-site_name: go-onigmo docs
+site_name: go-ruby-regexp docs
 site_description: "A pure-Go reimplementation of Onigmo, Ruby's regular-expression engine: a backtracking VM, no cgo."
-site_url: https://go-onigmo.github.io/docs/
-repo_url: https://github.com/go-onigmo
-repo_name: go-onigmo
+site_url: https://go-ruby-regexp.github.io/docs/
+repo_url: https://github.com/go-ruby-regexp
+repo_name: go-ruby-regexp
 edit_uri: ""
 
 theme:

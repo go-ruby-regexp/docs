@@ -1,6 +1,6 @@
 # Roadmap (phases)
 
-`go-onigmo/regexp` is grown **test-first**, one capability at a time, each phase
+`go-ruby-regexp/regexp` is grown **test-first**, one capability at a time, each phase
 differential-tested against Onigmo/MRI rather than built in isolation. There are
 six phases, 0 through 5. **The standalone engine roadmap (Phases 0–4) is
 complete**; Phase 5 (the Ruby surface) is downstream in the go-embedded-ruby

@@ -3,7 +3,7 @@
 A backtracking VM is the price of Ruby compatibility, and the bill comes due as
 **ReDoS** — regular-expression denial of service. Certain patterns
 (`(a+)+$` against a long non-matching input is the textbook case) make a naive
-backtracker explore an exponential number of paths. `go-onigmo/regexp` treats
+backtracker explore an exponential number of paths. `go-ruby-regexp/regexp` treats
 this as a first-class concern and mitigates it the way Ruby ≥3.2 does, rather
 than relying on the caller to defend itself.
 

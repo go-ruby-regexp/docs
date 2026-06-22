@@ -1,13 +1,13 @@
 # API
 
 The public API lives in `regexp.go` at the module root
-(`github.com/go-onigmo/regexp`). It is **Ruby-shaped but Go-idiomatic**: the
+(`github.com/go-ruby-regexp/regexp`). It is **Ruby-shaped but Go-idiomatic**: the
 concepts map onto Ruby's `Regexp`/`MatchData`, but the surface follows Go
 conventions (an explicit `error`, byte offsets, value types).
 
 !!! success "Status: implemented"
     The engine is built — the standalone roadmap (Phases 0–4) is complete and the
-    module is importable as `github.com/go-onigmo/regexp`. The shapes below are the
+    module is importable as `github.com/go-ruby-regexp/regexp`. The shapes below are the
     public surface; the replacement DSL and the full Ruby `Regexp`/`MatchData`
     object surface (Phase 5) live downstream in the go-embedded-ruby adapter. See
     the [Roadmap](roadmap.md).

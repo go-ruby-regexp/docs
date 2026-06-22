@@ -1,7 +1,7 @@
 # Why a backtracking engine
 
 Go already ships a regular-expression engine in the standard library, so the
-first question is why `go-onigmo/regexp` does not simply use it. The answer is
+first question is why `go-ruby-regexp/regexp` does not simply use it. The answer is
 that the standard library is **RE2**, and RE2 makes design choices that are
 incompatible with Ruby's regexps — both in features and in semantics.
 

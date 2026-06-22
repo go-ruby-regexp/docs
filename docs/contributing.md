@@ -1,6 +1,6 @@
 # Contributing
 
-Contributions are welcome. `go-onigmo/regexp` is built to a small set of
+Contributions are welcome. `go-ruby-regexp/regexp` is built to a small set of
 non-negotiable rules — they are what keep the engine pure-Go, correct, and
 Ruby-compatible. Please read these before opening a pull request.
 
@@ -36,8 +36,8 @@ Ruby-compatible. Please read these before opening a pull request.
 ## Where things live
 
 The engine — scanner/parser, compiler, backtracking VM, and the public API — is
-in [`github.com/go-onigmo/regexp`](https://github.com/go-onigmo/regexp). This
+in [`github.com/go-ruby-regexp/regexp`](https://github.com/go-ruby-regexp/regexp). This
 documentation site is in
-[`github.com/go-onigmo/docs`](https://github.com/go-onigmo/docs). Start from the
+[`github.com/go-ruby-regexp/docs`](https://github.com/go-ruby-regexp/docs). Start from the
 [Architecture overview](architecture/index.md) and the [Roadmap](roadmap.md) to
 find the right place for your change.

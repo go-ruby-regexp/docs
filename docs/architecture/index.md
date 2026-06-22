@@ -1,6 +1,6 @@
 # Architecture overview
 
-`go-onigmo/regexp` is a compiler **and** a virtual machine. A pattern is parsed
+`go-ruby-regexp/regexp` is a compiler **and** a virtual machine. A pattern is parsed
 into an abstract syntax tree, the AST is lowered to a bytecode program, and that
 program is executed by a backtracking VM against the input to produce
 `MatchData`. The model is Onigmo's — a backtracking matcher — not an NFA/DFA
@@ -31,7 +31,7 @@ Each stage has a single responsibility:
 
 ## Packages
 
-The engine (`github.com/go-onigmo/regexp`) is organized as a chain of small
+The engine (`github.com/go-ruby-regexp/regexp`) is organized as a chain of small
 packages mirroring the pipeline, plus the public API:
 
 | Package | Responsibility |
@@ -50,7 +50,7 @@ The detail pages cover the load-bearing pieces:
 ## Relationship to go-embedded-ruby
 
 The engine is **standalone**: it has no dependency on the Ruby runtime, and any
-Go program can import `github.com/go-onigmo/regexp` directly. The dependency runs
+Go program can import `github.com/go-ruby-regexp/regexp` directly. The dependency runs
 one way only — [go-embedded-ruby](https://github.com/go-embedded-ruby) uses this
 engine as its regexp backend. A thin adapter in
 `go-embedded-ruby/ruby/internal/regexp` maps Ruby's `Regexp` and `MatchData`
