@@ -12,7 +12,7 @@ adapter that consumes this engine, not part of this module.
 | 1 | Groups & quantifier modes | Named groups `(?<name>…)`, backreferences `\1` / `\k<name>`, and every quantifier mode — greedy, lazy `*? +? ?? {m,n}?`, possessive `*+ ++ ?+`, and atomic groups `(?>…)`. | **Done** |
 | 2 | Lookaround & calls | Lookahead `(?=…)` `(?!…)`, fixed/bounded-width lookbehind `(?<=…)` `(?<!…)`, the `\G` anchor, and recursive subexpression calls `\g<…>` (`\g<name>` / `\g<n>` / `\g<±n>` / `\g<0>`). | **Done** |
 | 3 | Unicode & encodings | `\p{…}` Unicode properties, POSIX bracket classes `[[:alpha:]]`, `\h` / `\H`, `\R`, rune-level `/i` case folding, inline flags `(?imx)`, and UTF-8 / ASCII-8BIT multi-encoding with multibyte class members `[é]` / `[à-ï]`. | **Done** |
-| 4 | ReDoS hardening & optimizer | `(pc, sp)` memoization, a deterministic step budget, a recursion-depth cap, and a wall-clock `WithTimeout`; a transparent start-position / required-interior-literal prefilter (up to ~210× faster); a benchmark suite. | **Done** |
+| 4 | ReDoS hardening & optimizer | `(pc, sp)` memoization, a deterministic step budget, a recursion-depth cap, and a wall-clock `WithTimeout`; a transparent start-position / required-interior-literal prefilter (up to ~210× faster); a **lazy-NFA + cached-DFA** fast path that beats C Onigmo on literal/alternation/structured scans and pulls the inner loops to **~1.6–5× of C** (`email` ≈ RE2); a benchmark suite. | **Done** |
 | 5 | Ruby surface | The full Ruby `Regexp`/`MatchData` surface via the go-embedded-ruby adapter, and the replacement DSL (`\1`, `\k<>`, `\&`, blocks). **Downstream** — lives in the adapter, not this module. | Downstream |
 
 ## Documented out-of-scope boundaries

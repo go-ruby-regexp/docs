@@ -3,8 +3,13 @@
 `go-ruby-regexp/regexp` is a compiler **and** a virtual machine. A pattern is parsed
 into an abstract syntax tree, the AST is lowered to a bytecode program, and that
 program is executed by a backtracking VM against the input to produce
-`MatchData`. The model is Onigmo's — a backtracking matcher — not an NFA/DFA
-simulator; see [Why a backtracking engine](../why.md) for the reasoning.
+`MatchData`. The model is Onigmo's — a backtracking matcher — see
+[Why a backtracking engine](../why.md) for the reasoning. The backtracker is the
+**source of truth** for every feature and for submatch extraction; a **lazy-NFA +
+cached-DFA** fast path (RE2-style) is layered over it for the
+capture/backref/lookaround-free *is-match* subset, where it now runs within
+**~1.6–5× of C Onigmo** and beats it outright on literal/alternation/structured
+scans (see [Performance](../index.md#performance)).
 
 ## The pipeline
 
@@ -16,8 +21,14 @@ pattern (string, encoding, flags)
    ▼
    │  optimizer         → anchors, first-byte sets, literal prefixes, atomic cuts
    ▼
-program  ──►  VM (backtracking, memoized, budgeted)  ──►  MatchData
+program  ──►  VM (backtracking, memoized, budgeted)        ──►  MatchData
+        └──►  lazy-NFA + cached-DFA fast path (is-match,    ──┘
+              capture/backref/lookaround-free subset)
 ```
+
+The two engines agree byte-for-byte: the DFA fast path answers *whether* a match
+exists (and its bounds) on the matchable subset, while the backtracking VM
+extracts the actual submatches and handles every feature outside that subset.
 
 Each stage has a single responsibility:
 
@@ -39,7 +50,7 @@ packages mirroring the pipeline, plus the public API:
 | `internal/syntax` | scanner + parser → AST; Onigmo grammar and escapes |
 | `internal/ast` | the typed AST node set the parser produces and the compiler consumes |
 | `internal/compile` | AST → VM program (instructions + capture/group metadata), and the `Encoding`-keyed cursor (UTF-8 / ASCII-8BIT) |
-| `internal/vm` | backtracking matcher: thread state, backtrack stack, memo, step/recursion budget, wall-clock timeout, and the start-position / interior-literal prefilters |
+| `internal/vm` | backtracking matcher: thread state, backtrack stack, memo, step/recursion budget, wall-clock timeout, the start-position / interior-literal prefilters, and the lazy-NFA + cached-DFA fast path (`dfa.go` / `dfa_run.go`) for the matchable is-match subset |
 | `internal/charset` | `\p{…}` Unicode property classification |
 | `regexp.go` | public API: `Compile` / `CompileEnc`, `Match` / `MatchString`, `WithTimeout`, `Encoding`, and `MatchData` (spans by index and name) |
 

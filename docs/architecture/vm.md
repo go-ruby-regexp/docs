@@ -46,6 +46,34 @@ leftmost-longest (POSIX) default. Because the preference order is observable in
 the result, the VM must try branches in exactly Onigmo's order to be
 byte-compatible — the match span and the captures depend on it.
 
+## The lazy-NFA + cached-DFA fast path
+
+The backtracking VM is the **source of truth**, but for the *is-match* question on
+the subset of patterns with **no backreference, subexpression call, lookaround,
+atomic group, or over-large bounded loop** — and where no strong literal prefilter
+already applies — the engine runs a faster path instead.
+
+A Thompson-NFA is derived once from the program (fused quantifier opcodes unrolled
+back into split/atom/jump) and simulated with a **priority-ordered thread list**, so
+the highest-priority thread to reach the accept fixes the match end — preserving
+Ruby's **leftmost-first** semantics (unlike a leftmost-longest set-DFA). Over that
+simulation sits a **cached, RE2-style lazy DFA**: the
+`(frontier, byte-class) → next-frontier` transition is memoized the first time it is
+seen and published via an atomic pointer, so a steady-state ASCII scan costs roughly
+one table load per byte instead of recomputing the epsilon-closure each step.
+Multi-byte UTF-8 lead bytes and assertion-crossing closures **fall back** to the
+per-step simulation for that one position; an **adaptive gate** reroutes
+multi-byte-heavy haystacks to the plain simulation entirely, so such input is never
+slower than the bare NFA while ASCII-dominated input keeps the cached-table win.
+
+The result is **byte-identical** to the backtracker on the full MRI / C Onigmo / Ruby
+/ RE2 cross-check, and **linear-time** on the matchable subset by construction. A
+pattern *with* captures still uses this path for the is-match decision (whether a
+match exists never depends on captured text) and the backtracking VM for the actual
+submatch extraction. The two share the exact per-atom acceptance tests, so the DFA
+accepts precisely the bytes the VM does. See
+[Performance](../index.md#performance) for where this lands against C and RE2.
+
 ## How backreferences constrain optimization
 
 A `backref` instruction matches text whose value is only known **at run time**

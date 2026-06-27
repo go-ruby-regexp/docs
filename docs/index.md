@@ -34,6 +34,30 @@ module path is `github.com/go-ruby-regexp/regexp`.
     documented out-of-scope boundaries; Phase 5 (the Ruby surface) is downstream
     in the go-embedded-ruby adapter, not in this engine module.
 
+## Performance
+
+The engine is measured against the bar it reimplements — **C Onigmo** — and
+against Go's stdlib `regexp` (**RE2**). Honest wins and losses (Apple M4 Max,
+single core; full numbers in
+[BENCHMARKS.md](https://github.com/go-ruby-regexp/regexp/blob/main/BENCHMARKS.md)):
+
+- **Beats C Onigmo on the headline cases.** Literal scans run **1.7× faster**
+  than C (`strings.Index` prefilter vs byte-by-byte `onig_search`); an
+  alternation miss (`zoo|quux|kite`) **1.2× C and 5.8× RE2**; a structured
+  numeric scan (`([0-9]{1,3}\.){3}…`) **6.5× C and 33× RE2**; the `email` scan
+  lands **≈ RE2**.
+- **ReDoS safety (the headline).** On `\A(a|aa)+b` the C Onigmo we reimplement
+  **blows up past 70 s**; our `(pc, sp)` memo holds it to **~2 µs** — we are
+  algorithmically safer than the engine we clone.
+- **Inner loops narrowed to 1.6–5× of C** (was far worse) after a **lazy-NFA +
+  cached-DFA** search path (an RE2-style on-the-fly simulation with a memoized
+  `(frontier, byte-class) → frontier` transition table) now serves the
+  capture/backref/lookaround-free subset; the backtracking VM remains the source
+  of truth for the feature-rich patterns and submatch extraction. Multi-byte-heavy
+  UTF-8 input is gated back to the per-step simulation, so it is never slower than
+  the bare NFA. The residual gap is early-hit micro-cases, where C's per-call
+  setup is cheaper than warming the table.
+
 ## Repositories
 
 | Repo | What it is |
@@ -55,8 +79,12 @@ module path is `github.com/go-ruby-regexp/regexp`.
 
 ## What it is not
 
-- **Not** an NFA/DFA or RE2-style engine. It does not guarantee linear time;
-  instead it bounds pathological matching with a budget.
+- **Not** an RE2 replacement. Its source-of-truth matcher is a backtracking VM,
+  so it does not guarantee linear time; instead it bounds pathological matching
+  with memoization plus a step/time budget. (A lazy-NFA + cached-DFA fast path
+  *is* layered in for the capture/backref/lookaround-free subset — see
+  [Performance](#performance) — but the backtracker remains authoritative for the
+  feature-rich patterns and for submatch extraction.)
 - **Not** a drop-in for Go's standard `regexp` syntax — it implements Onigmo
   (Ruby) syntax and semantics.
 - **Not** dependent on go-embedded-ruby; the dependency runs the other way.
