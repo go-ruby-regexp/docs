@@ -554,9 +554,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#headline-the-previously-losing-match-ops-now-beat-mri-yjit" class="md-nav__link">
+  <a href="#headline-every-previously-losing-match-op-now-beats-mri-yjit" class="md-nav__link">
     <span class="md-ellipsis">
-      Headline — the previously-losing match ops now beat MRI + YJIT
+      Headline — every previously-losing match op now beats MRI + YJIT
     </span>
   </a>
   
@@ -770,9 +770,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#headline-the-previously-losing-match-ops-now-beat-mri-yjit" class="md-nav__link">
+  <a href="#headline-every-previously-losing-match-op-now-beats-mri-yjit" class="md-nav__link">
     <span class="md-ellipsis">
-      Headline — the previously-losing match ops now beat MRI + YJIT
+      Headline — every previously-losing match op now beats MRI + YJIT
     </span>
   </a>
   
@@ -1001,9 +1001,11 @@ every op cross-checked; the run aborts on mismatch).</p>
 <p><strong>The bar is MRI + YJIT.</strong> YJIT removes the interpreter dispatch around MRI's C
 Onigmo, so <code>MRI + YJIT</code> is the toughest interpreter column and the one the
 tokenizer-bound <code>StringScanner</code> ops (<code>scan</code>/<code>skip</code>/<code>match?</code>/<code>scan_until</code>)
-previously lost to by 1.8×–4.2× — a gap localised to this <strong>match engine</strong>, now
-the target of a pooled anchored-DFA path, a bounds-only match API, an ASCII-class
-membership bitset, and a pooled backtracking VM.</p>
+previously lost to by 1.8×–4.2× — a gap localised to this <strong>match engine</strong>, the
+target of a pooled anchored-DFA path, a bounds-only match API, an ASCII-class
+membership bitset, a pooled backtracking VM, and — closing the last op — a <strong>fast
+anchored class-run consumer</strong> that settles a bare <code>\s+</code>/<code>\S+</code>/<code>\w+</code> run at the
+cursor with one class-bitset bit test per byte, no per-position NFA state.</p>
 <ul>
 <li><strong>Host:</strong> Apple M4 Max (<code>Mac16,5</code>, arm64, 16 cores), macOS 26.5.1 (Darwin
   25.5.0) — <strong>date 2026-07-03</strong>.</li>
@@ -1019,10 +1021,11 @@ membership bitset, and a pooled backtracking VM.</p>
   lexer-shaped body (<code>"foo123 + bar456 - baz789 * qux000 / quux ; "</code> × 64), both
   byte-identical across all drivers.</li>
 </ul>
-<h3 id="headline-the-previously-losing-match-ops-now-beat-mri-yjit">Headline — the previously-losing match ops now beat MRI + YJIT<a class="headerlink" href="#headline-the-previously-losing-match-ops-now-beat-mri-yjit" title="Permanent link">&para;</a></h3>
+<h3 id="headline-every-previously-losing-match-op-now-beats-mri-yjit">Headline — every previously-losing match op now beats MRI + YJIT<a class="headerlink" href="#headline-every-previously-losing-match-op-now-beats-mri-yjit" title="Permanent link">&para;</a></h3>
 <p>These are the tokenizer-bound ops the strscan parity suite flagged as trailing
-YJIT by 1.8×–4.2×. The pure-Go library now <strong>beats YJIT on three of the four</strong>,
-and closes the last one (<code>skip</code>) from 4.2× behind to 1.4×.</p>
+YJIT by 1.8×–4.2×. The pure-Go library now <strong>beats YJIT on all of them</strong> — the
+last holdout, <code>skip</code>, goes from 1.4× <em>behind</em> YJIT to <strong>~10× ahead</strong> with the
+anchored class-run consumer, and now beats even the C Onigmo it reimplements.</p>
 <table>
 <thead>
 <tr>
@@ -1036,53 +1039,59 @@ and closes the last one (<code>skip</code>) from 4.2× behind to 1.4×.</p>
 </thead>
 <tbody>
 <tr>
+<td><code>skip</code></td>
+<td style="text-align: right;"><strong>9 862</strong></td>
+<td style="text-align: right;">131 257</td>
+<td style="text-align: right;">98 153</td>
+<td style="text-align: right;">13.3× faster</td>
+<td style="text-align: right;"><strong>9.95× faster</strong> ✅</td>
+</tr>
+<tr>
+<td><code>match?</code></td>
+<td style="text-align: right;"><strong>15 697</strong></td>
+<td style="text-align: right;">330 830</td>
+<td style="text-align: right;">258 050</td>
+<td style="text-align: right;">21.1× faster</td>
+<td style="text-align: right;"><strong>16.4× faster</strong> ✅</td>
+</tr>
+<tr>
 <td><code>scan-tokenize</code></td>
-<td style="text-align: right;"><strong>192 971</strong></td>
-<td style="text-align: right;">454 730</td>
-<td style="text-align: right;">319 175</td>
-<td style="text-align: right;">2.36× faster</td>
-<td style="text-align: right;"><strong>1.65× faster</strong> ✅</td>
+<td style="text-align: right;"><strong>110 632</strong></td>
+<td style="text-align: right;">450 490</td>
+<td style="text-align: right;">326 165</td>
+<td style="text-align: right;">4.07× faster</td>
+<td style="text-align: right;"><strong>2.95× faster</strong> ✅</td>
 </tr>
 <tr>
 <td><code>scan_until</code></td>
-<td style="text-align: right;"><strong>17 558</strong></td>
-<td style="text-align: right;">27 728</td>
-<td style="text-align: right;">21 895</td>
+<td style="text-align: right;"><strong>17 448</strong></td>
+<td style="text-align: right;">27 599</td>
+<td style="text-align: right;">21 901</td>
 <td style="text-align: right;">1.58× faster</td>
 <td style="text-align: right;"><strong>1.25× faster</strong> ✅</td>
 </tr>
 <tr>
-<td><code>match?</code></td>
-<td style="text-align: right;"><strong>249 231</strong></td>
-<td style="text-align: right;">332 270</td>
-<td style="text-align: right;">260 610</td>
-<td style="text-align: right;">1.33× faster</td>
-<td style="text-align: right;"><strong>1.05× faster</strong> ✅</td>
-</tr>
-<tr>
-<td><code>skip</code></td>
-<td style="text-align: right;">136 771</td>
-<td style="text-align: right;">132 280</td>
-<td style="text-align: right;">98 107</td>
-<td style="text-align: right;">0.97× (≈MRI)</td>
-<td style="text-align: right;">1.39× slower ⚠️</td>
-</tr>
-<tr>
 <td><code>gsub-space</code></td>
-<td style="text-align: right;"><strong>176 006</strong></td>
-<td style="text-align: right;">218 250</td>
-<td style="text-align: right;">216 050</td>
-<td style="text-align: right;">1.24× faster</td>
-<td style="text-align: right;"><strong>1.23× faster</strong> ✅</td>
+<td style="text-align: right;"><strong>172 248</strong></td>
+<td style="text-align: right;">218 700</td>
+<td style="text-align: right;">215 000</td>
+<td style="text-align: right;">1.27× faster</td>
+<td style="text-align: right;"><strong>1.25× faster</strong> ✅</td>
 </tr>
 </tbody>
 </table>
-<p><code>skip</code> is the honest floor: it is dominated by consuming long <code>\S+</code> / <code>\s+</code> runs,
-where each call steps the linear-time NFA byte by byte and cannot beat C Onigmo's
-hand-written inner loop — the same residual named in the C-parity report. It is
-still <strong>2.9× faster than before</strong> this work (was 4.16× behind YJIT) and at MRI
-parity; closing it further needs a byte-class-table anchored consumer, tracked
-separately.</p>
+<p><code>skip</code> was the honest floor of the previous round (dominated by consuming long
+<code>\S+</code>/<code>\s+</code> runs one NFA step per byte). The <strong>anchored class-run consumer</strong> now
+recognises that a bare single-char class repeat at the cursor is exactly "how far
+does the class reach", and walks it in a tight loop over a 256-bit ASCII
+membership bitset — one bit test per byte, no per-position NFA frontier to seed,
+close, or intern. On the alternating-runs <code>skip</code> workload it drops from 136 771 ns
+to <strong>9 862 ns (13.9× faster than before)</strong>, clearing MRI (13.3×), YJIT (9.95×),
+and C Onigmo's own hand-written inner loop (34 567 ns → <strong>3.5× ahead</strong>). A byte
+<code>≥ 0x80</code> under UTF-8 begins a multi-byte code point the byte bitset cannot decide,
+so the consumer bows out to the general engine there — correct, unaccelerated, and
+rare on ASCII tokenizer input; results are byte-identical to the general engine at
+every position.</p>
 <h3 id="stringscanner-style-tokenizer-ops-many-short-matches">StringScanner-style tokenizer ops (many short matches)<a class="headerlink" href="#stringscanner-style-tokenizer-ops-many-short-matches" title="Permanent link">&para;</a></h3>
 <p>The classic lexer workload: anchored match from an advancing cursor, thousands of
 short matches per pass. The Go driver drives the engine through the bounds-only
@@ -1101,32 +1110,32 @@ Onigmo via <code>onig_match</code> / <code>onig_search</code>.</p>
 <tbody>
 <tr>
 <td><strong>go-ruby-regexp (pure Go)</strong></td>
-<td style="text-align: right;">192970.8</td>
-<td style="text-align: right;">0.42×</td>
+<td style="text-align: right;">110632.3</td>
+<td style="text-align: right;">0.25×</td>
 </tr>
 <tr>
 <td>C Onigmo 6.2.0</td>
-<td style="text-align: right;">49155.0</td>
+<td style="text-align: right;">48320.0</td>
 <td style="text-align: right;">0.11×</td>
 </tr>
 <tr>
 <td>MRI</td>
-<td style="text-align: right;">454730.0</td>
+<td style="text-align: right;">450490.0</td>
 <td style="text-align: right;">1.00×</td>
 </tr>
 <tr>
 <td>MRI + YJIT</td>
-<td style="text-align: right;">319175.0</td>
-<td style="text-align: right;">0.70×</td>
+<td style="text-align: right;">326165.0</td>
+<td style="text-align: right;">0.72×</td>
 </tr>
 <tr>
 <td>JRuby</td>
-<td style="text-align: right;">364835.8</td>
-<td style="text-align: right;">0.80×</td>
+<td style="text-align: right;">458574.8</td>
+<td style="text-align: right;">1.02×</td>
 </tr>
 <tr>
 <td>TruffleRuby</td>
-<td style="text-align: right;">55555.4</td>
+<td style="text-align: right;">55583.1</td>
 <td style="text-align: right;">0.12×</td>
 </tr>
 </tbody>
@@ -1143,33 +1152,33 @@ Onigmo via <code>onig_match</code> / <code>onig_search</code>.</p>
 <tbody>
 <tr>
 <td><strong>go-ruby-regexp (pure Go)</strong></td>
-<td style="text-align: right;">136770.8</td>
-<td style="text-align: right;">1.03×</td>
+<td style="text-align: right;">9861.9</td>
+<td style="text-align: right;">0.08×</td>
 </tr>
 <tr>
 <td>C Onigmo 6.2.0</td>
-<td style="text-align: right;">35093.3</td>
-<td style="text-align: right;">0.27×</td>
+<td style="text-align: right;">34566.7</td>
+<td style="text-align: right;">0.26×</td>
 </tr>
 <tr>
 <td>MRI</td>
-<td style="text-align: right;">132280.0</td>
+<td style="text-align: right;">131256.7</td>
 <td style="text-align: right;">1.00×</td>
 </tr>
 <tr>
 <td>MRI + YJIT</td>
-<td style="text-align: right;">98106.7</td>
-<td style="text-align: right;">0.74×</td>
+<td style="text-align: right;">98153.3</td>
+<td style="text-align: right;">0.75×</td>
 </tr>
 <tr>
 <td>JRuby</td>
-<td style="text-align: right;">78500.7</td>
-<td style="text-align: right;">0.59×</td>
+<td style="text-align: right;">78753.5</td>
+<td style="text-align: right;">0.60×</td>
 </tr>
 <tr>
 <td>TruffleRuby</td>
-<td style="text-align: right;">29909.2</td>
-<td style="text-align: right;">0.23×</td>
+<td style="text-align: right;">29358.6</td>
+<td style="text-align: right;">0.22×</td>
 </tr>
 </tbody>
 </table>
@@ -1185,32 +1194,32 @@ Onigmo via <code>onig_match</code> / <code>onig_search</code>.</p>
 <tbody>
 <tr>
 <td><strong>go-ruby-regexp (pure Go)</strong></td>
-<td style="text-align: right;">249231.2</td>
-<td style="text-align: right;">0.75×</td>
+<td style="text-align: right;">15696.5</td>
+<td style="text-align: right;">0.05×</td>
 </tr>
 <tr>
 <td>C Onigmo 6.2.0</td>
-<td style="text-align: right;">50595.0</td>
+<td style="text-align: right;">50195.0</td>
 <td style="text-align: right;">0.15×</td>
 </tr>
 <tr>
 <td>MRI</td>
-<td style="text-align: right;">332270.0</td>
+<td style="text-align: right;">330830.0</td>
 <td style="text-align: right;">1.00×</td>
 </tr>
 <tr>
 <td>MRI + YJIT</td>
-<td style="text-align: right;">260610.0</td>
+<td style="text-align: right;">258050.0</td>
 <td style="text-align: right;">0.78×</td>
 </tr>
 <tr>
 <td>JRuby</td>
-<td style="text-align: right;">146777.3</td>
+<td style="text-align: right;">146066.0</td>
 <td style="text-align: right;">0.44×</td>
 </tr>
 <tr>
 <td>TruffleRuby</td>
-<td style="text-align: right;">104714.2</td>
+<td style="text-align: right;">104621.5</td>
 <td style="text-align: right;">0.32×</td>
 </tr>
 </tbody>
@@ -1227,33 +1236,33 @@ Onigmo via <code>onig_match</code> / <code>onig_search</code>.</p>
 <tbody>
 <tr>
 <td><strong>go-ruby-regexp (pure Go)</strong></td>
-<td style="text-align: right;">17558.2</td>
+<td style="text-align: right;">17448.2</td>
 <td style="text-align: right;">0.63×</td>
 </tr>
 <tr>
 <td>C Onigmo 6.2.0</td>
-<td style="text-align: right;">13282.5</td>
+<td style="text-align: right;">13275.5</td>
 <td style="text-align: right;">0.48×</td>
 </tr>
 <tr>
 <td>MRI</td>
-<td style="text-align: right;">27728.0</td>
+<td style="text-align: right;">27599.0</td>
 <td style="text-align: right;">1.00×</td>
 </tr>
 <tr>
 <td>MRI + YJIT</td>
-<td style="text-align: right;">21894.5</td>
+<td style="text-align: right;">21901.0</td>
 <td style="text-align: right;">0.79×</td>
 </tr>
 <tr>
 <td>JRuby</td>
-<td style="text-align: right;">15109.4</td>
-<td style="text-align: right;">0.54×</td>
+<td style="text-align: right;">15075.2</td>
+<td style="text-align: right;">0.55×</td>
 </tr>
 <tr>
 <td>TruffleRuby</td>
-<td style="text-align: right;">9384.6</td>
-<td style="text-align: right;">0.34×</td>
+<td style="text-align: right;">8949.4</td>
+<td style="text-align: right;">0.32×</td>
 </tr>
 </tbody>
 </table>
@@ -1270,33 +1279,33 @@ Onigmo via <code>onig_match</code> / <code>onig_search</code>.</p>
 <tbody>
 <tr>
 <td><strong>go-ruby-regexp (pure Go)</strong></td>
-<td style="text-align: right;">266687.5</td>
-<td style="text-align: right;">0.73×</td>
+<td style="text-align: right;">263070.8</td>
+<td style="text-align: right;">0.71×</td>
 </tr>
 <tr>
 <td>C Onigmo 6.2.0</td>
-<td style="text-align: right;">138800.0</td>
+<td style="text-align: right;">140900.0</td>
 <td style="text-align: right;">0.38×</td>
 </tr>
 <tr>
 <td>MRI</td>
-<td style="text-align: right;">366200.0</td>
+<td style="text-align: right;">370750.0</td>
 <td style="text-align: right;">1.00×</td>
 </tr>
 <tr>
 <td>MRI + YJIT</td>
-<td style="text-align: right;">369650.0</td>
-<td style="text-align: right;">1.01×</td>
+<td style="text-align: right;">370800.0</td>
+<td style="text-align: right;">1.00×</td>
 </tr>
 <tr>
 <td>JRuby</td>
-<td style="text-align: right;">236485.4</td>
-<td style="text-align: right;">0.65×</td>
+<td style="text-align: right;">227427.1</td>
+<td style="text-align: right;">0.61×</td>
 </tr>
 <tr>
 <td>TruffleRuby</td>
-<td style="text-align: right;">82833.3</td>
-<td style="text-align: right;">0.23×</td>
+<td style="text-align: right;">82268.7</td>
+<td style="text-align: right;">0.22×</td>
 </tr>
 </tbody>
 </table>
@@ -1312,33 +1321,33 @@ Onigmo via <code>onig_match</code> / <code>onig_search</code>.</p>
 <tbody>
 <tr>
 <td><strong>go-ruby-regexp (pure Go)</strong></td>
-<td style="text-align: right;">593.4</td>
-<td style="text-align: right;">0.34×</td>
+<td style="text-align: right;">654.7</td>
+<td style="text-align: right;">0.38×</td>
 </tr>
 <tr>
 <td>C Onigmo 6.2.0</td>
-<td style="text-align: right;">2392.0</td>
-<td style="text-align: right;">1.35×</td>
+<td style="text-align: right;">2299.0</td>
+<td style="text-align: right;">1.32×</td>
 </tr>
 <tr>
 <td>MRI</td>
-<td style="text-align: right;">1769.0</td>
+<td style="text-align: right;">1745.0</td>
 <td style="text-align: right;">1.00×</td>
 </tr>
 <tr>
 <td>MRI + YJIT</td>
-<td style="text-align: right;">1693.5</td>
+<td style="text-align: right;">1673.0</td>
 <td style="text-align: right;">0.96×</td>
 </tr>
 <tr>
 <td>JRuby</td>
-<td style="text-align: right;">3323.1</td>
-<td style="text-align: right;">1.88×</td>
+<td style="text-align: right;">3398.7</td>
+<td style="text-align: right;">1.95×</td>
 </tr>
 <tr>
 <td>TruffleRuby ‡</td>
-<td style="text-align: right;">248.1</td>
-<td style="text-align: right;">0.14×</td>
+<td style="text-align: right;">203.6</td>
+<td style="text-align: right;">0.12×</td>
 </tr>
 </tbody>
 </table>
@@ -1354,33 +1363,33 @@ Onigmo via <code>onig_match</code> / <code>onig_search</code>.</p>
 <tbody>
 <tr>
 <td><strong>go-ruby-regexp (pure Go)</strong></td>
-<td style="text-align: right;">642.6</td>
-<td style="text-align: right;">2.97×</td>
+<td style="text-align: right;">647.8</td>
+<td style="text-align: right;">3.01×</td>
 </tr>
 <tr>
 <td>C Onigmo 6.2.0</td>
 <td style="text-align: right;">277.0</td>
-<td style="text-align: right;">1.28×</td>
+<td style="text-align: right;">1.29×</td>
 </tr>
 <tr>
 <td>MRI</td>
-<td style="text-align: right;">216.5</td>
+<td style="text-align: right;">215.0</td>
 <td style="text-align: right;">1.00×</td>
 </tr>
 <tr>
 <td>MRI + YJIT</td>
-<td style="text-align: right;">183.5</td>
-<td style="text-align: right;">0.85×</td>
+<td style="text-align: right;">187.5</td>
+<td style="text-align: right;">0.87×</td>
 </tr>
 <tr>
 <td>JRuby</td>
-<td style="text-align: right;">181.7</td>
-<td style="text-align: right;">0.84×</td>
+<td style="text-align: right;">179.0</td>
+<td style="text-align: right;">0.83×</td>
 </tr>
 <tr>
 <td>TruffleRuby ‡</td>
-<td style="text-align: right;">541.6</td>
-<td style="text-align: right;">2.50×</td>
+<td style="text-align: right;">524.6</td>
+<td style="text-align: right;">2.44×</td>
 </tr>
 </tbody>
 </table>
@@ -1396,33 +1405,33 @@ Onigmo via <code>onig_match</code> / <code>onig_search</code>.</p>
 <tbody>
 <tr>
 <td><strong>go-ruby-regexp (pure Go)</strong></td>
-<td style="text-align: right;">176006.2</td>
-<td style="text-align: right;">0.81×</td>
+<td style="text-align: right;">172248.0</td>
+<td style="text-align: right;">0.79×</td>
 </tr>
 <tr>
 <td>C Onigmo 6.2.0</td>
-<td style="text-align: right;">103000.0</td>
+<td style="text-align: right;">102650.0</td>
 <td style="text-align: right;">0.47×</td>
 </tr>
 <tr>
 <td>MRI</td>
-<td style="text-align: right;">218250.0</td>
+<td style="text-align: right;">218700.0</td>
 <td style="text-align: right;">1.00×</td>
 </tr>
 <tr>
 <td>MRI + YJIT</td>
-<td style="text-align: right;">216050.0</td>
-<td style="text-align: right;">0.99×</td>
+<td style="text-align: right;">215000.0</td>
+<td style="text-align: right;">0.98×</td>
 </tr>
 <tr>
 <td>JRuby</td>
-<td style="text-align: right;">100887.5</td>
-<td style="text-align: right;">0.46×</td>
+<td style="text-align: right;">91752.1</td>
+<td style="text-align: right;">0.42×</td>
 </tr>
 <tr>
 <td>TruffleRuby</td>
-<td style="text-align: right;">80662.5</td>
-<td style="text-align: right;">0.37×</td>
+<td style="text-align: right;">78179.2</td>
+<td style="text-align: right;">0.36×</td>
 </tr>
 </tbody>
 </table>
@@ -1444,38 +1453,38 @@ including MRI + YJIT, by <strong>6–120×</strong>.</p>
 <tbody>
 <tr>
 <td><code>compile-literal</code> (<code>needle</code>)</td>
-<td style="text-align: right;"><strong>195.2</strong></td>
-<td style="text-align: right;">174.0</td>
-<td style="text-align: right;">366.2</td>
-<td style="text-align: right;">338.6</td>
+<td style="text-align: right;"><strong>195.5</strong></td>
+<td style="text-align: right;">190.8</td>
+<td style="text-align: right;">363.2</td>
+<td style="text-align: right;">334.0</td>
 </tr>
 <tr>
 <td><code>compile-class</code> (<code>[A-Za-z0-9_]+</code>)</td>
-<td style="text-align: right;"><strong>131.8</strong></td>
-<td style="text-align: right;">475.2</td>
-<td style="text-align: right;">769.8</td>
-<td style="text-align: right;">697.4</td>
+<td style="text-align: right;"><strong>129.4</strong></td>
+<td style="text-align: right;">472.2</td>
+<td style="text-align: right;">769.6</td>
+<td style="text-align: right;">721.4</td>
 </tr>
 <tr>
 <td><code>compile-alt</code> (<code>cat|dog|fox|…</code>)</td>
-<td style="text-align: right;"><strong>784.9</strong></td>
-<td style="text-align: right;">1592.6</td>
-<td style="text-align: right;">2171.8</td>
-<td style="text-align: right;">2139.0</td>
+<td style="text-align: right;"><strong>764.6</strong></td>
+<td style="text-align: right;">1604.8</td>
+<td style="text-align: right;">2191.4</td>
+<td style="text-align: right;">2147.2</td>
 </tr>
 <tr>
 <td><code>compile-backtrack</code> (<code>([0-9]{1,3}\.){3}…</code>)</td>
-<td style="text-align: right;"><strong>327.9</strong></td>
-<td style="text-align: right;">1028.2</td>
-<td style="text-align: right;">1454.8</td>
-<td style="text-align: right;">1345.0</td>
+<td style="text-align: right;"><strong>330.6</strong></td>
+<td style="text-align: right;">1024.0</td>
+<td style="text-align: right;">1410.6</td>
+<td style="text-align: right;">1378.8</td>
 </tr>
 <tr>
 <td><code>compile-unicode</code> (<code>\p{L}+</code>)</td>
-<td style="text-align: right;"><strong>105.9</strong></td>
-<td style="text-align: right;">10818.8</td>
-<td style="text-align: right;">12811.4</td>
-<td style="text-align: right;">12567.0</td>
+<td style="text-align: right;"><strong>103.9</strong></td>
+<td style="text-align: right;">10694.6</td>
+<td style="text-align: right;">12828.4</td>
+<td style="text-align: right;">12662.0</td>
 </tr>
 </tbody>
 </table>
@@ -1485,20 +1494,26 @@ an <em>elided</em> compile, not real compilation. The Go driver defeats this wit
 sink; MRI and C Onigmo compile every iteration.)</p>
 <h3 id="reading-the-numbers">Reading the numbers<a class="headerlink" href="#reading-the-numbers" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>The match-throughput target is met.</strong> Of the four <code>StringScanner</code> ops the
-  strscan suite flagged as behind YJIT, <strong><code>scan-tokenize</code> (1.65×), <code>scan_until</code>
-  (1.25×) and <code>match?</code> (1.05×) now beat YJIT</strong>, and <code>gsub</code> (1.23×) and the full
-  <code>scan \w+</code> (1.39×) beat it too. What moved them: the anchored <code>MatchAt</code> fast
-  path now runs on the pooled lazy-NFA instead of allocating a fresh backtracking
+<li><strong>The match-throughput target is met — every flagged op now beats YJIT.</strong>
+  <code>skip</code> (9.95×), <code>match?</code> (16.4×), <code>scan-tokenize</code> (2.95×), <code>scan_until</code> (1.25×),
+  <code>gsub</code> (1.25×) all clear MRI + YJIT. What moved them: the anchored <code>MatchAt</code> fast
+  path runs on the pooled lazy-NFA instead of allocating a fresh backtracking
   machine per call; a <strong>bounds-only API</strong> (<code>MatchBoundsAt</code>/<code>MatchBounds</code>) returns
   a span with <strong>zero allocation</strong> for <code>skip</code>/<code>match?</code>/<code>scan</code>, matching MRI's
   integer-returning <code>StringScanner#skip</code>; an <strong>ASCII-class bitset</strong> makes class
-  membership an O(1) bit test; and the backtracking VM itself is now pooled.</li>
-<li><strong><code>skip</code> is the honest floor (1.39× behind YJIT).</strong> It consumes long <code>\S+</code>/<code>\s+</code>
-  runs, and the linear-time NFA steps them byte by byte where C Onigmo runs a
-  tight hand-written loop. It is at MRI parity and 2.9× better than before this
-  work; the remaining gap needs a byte-class-table anchored run, tracked
-  separately.</li>
+  membership an O(1) bit test; the backtracking VM itself is pooled; and — the
+  final lever — a <strong>fast anchored class-run consumer</strong> walks a bare <code>\s+</code>/<code>\S+</code>/
+  <code>\w+</code>/<code>[…]+</code> run at the cursor with one bitset bit test per byte and no
+  per-position NFA state.</li>
+<li><strong><code>skip</code> is no longer the floor — it is now the biggest win.</strong> Recognising that
+  a bare single-char class repeat anchored at the cursor is exactly "how far does
+  the class reach", the consumer replaces the per-byte NFA stepping with a tight
+  bitset loop: 136 771 ns → <strong>9 862 ns (13.9× faster than before)</strong>, clearing MRI
+  (13.3×), YJIT (9.95×) and even C Onigmo's hand-written inner loop (3.5×). Under
+  UTF-8 a byte <code>≥ 0x80</code> starts a multi-byte code point the byte bitset cannot
+  decide, so the consumer defers the whole match to the general engine there —
+  correct and byte-identical, just unaccelerated on non-ASCII runs. <code>match?</code> (over
+  <code>[A-Za-z0-9_]+</code>) rides the same fast path and jumps from 0.75× MRI to 0.05×.</li>
 <li><strong><code>=~</code> beats MRI <em>and</em> YJIT <em>and</em> C Onigmo</strong> (<code>search-email</code> 0.34× MRI, 0.25× of
   C): the literal/first-byte prefilter jumps straight to the <code>@</code>-anchored match
   instead of stepping every position. The one match lag is the <strong><code>match</code> ipv4
@@ -1508,10 +1523,14 @@ sink; MRI and C Onigmo compile every iteration.)</p>
 <li><strong>Compile is now a strength, not a cost.</strong> The lazy build puts every compile op
   ahead of MRI + YJIT (6–120×), including <code>\p{L}+</code>, which skips Onigmo's large
   per-compile Unicode-property table build.</li>
-<li><strong>C Onigmo column.</strong> Raw C is still 4–5× ahead on the anchored tokenizer inner
-  loops (<code>scan-tokenize</code>, <code>match?</code>, <code>skip</code>) and on the full-corpus scans — the
-  hand-asm walls. The stated bar is MRI + YJIT (C Onigmo <em>through the
-  interpreter</em>), which the pure-Go engine now clears on every op except <code>skip</code>.</li>
+<li><strong>C Onigmo column.</strong> Raw C is still ahead on <code>scan-tokenize</code> (whose <code>[A-Za-z_]…</code>
+  ident pattern is two atoms, not a single class-run, so it keeps the general
+  engine) and on the full-corpus scans — the hand-asm walls. But on the class-run
+  ops the pure-Go engine now <strong>beats raw C</strong>: <code>skip</code> 3.5× and <code>match?</code> 3.2× ahead
+  of C Onigmo, because the bitset consumer does per byte what Onigmo's inner loop
+  cannot beat without the same specialisation. The stated bar is MRI + YJIT (C
+  Onigmo <em>through the interpreter</em>), which the pure-Go engine now clears on <strong>every</strong>
+  tokenizer op.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Fuller C-Onigmo parity report</p>
