@@ -59,9 +59,11 @@ every op cross-checked; the run aborts on mismatch).
 **The bar is MRI + YJIT.** YJIT removes the interpreter dispatch around MRI's C
 Onigmo, so `MRI + YJIT` is the toughest interpreter column and the one the
 tokenizer-bound `StringScanner` ops (`scan`/`skip`/`match?`/`scan_until`)
-previously lost to by 1.8×–4.2× — a gap localised to this **match engine**, now
-the target of a pooled anchored-DFA path, a bounds-only match API, an ASCII-class
-membership bitset, and a pooled backtracking VM.
+previously lost to by 1.8×–4.2× — a gap localised to this **match engine**, the
+target of a pooled anchored-DFA path, a bounds-only match API, an ASCII-class
+membership bitset, a pooled backtracking VM, and — closing the last op — a **fast
+anchored class-run consumer** that settles a bare `\s+`/`\S+`/`\w+` run at the
+cursor with one class-bitset bit test per byte, no per-position NFA state.
 
 - **Host:** Apple M4 Max (`Mac16,5`, arm64, 16 cores), macOS 26.5.1 (Darwin
   25.5.0) — **date 2026-07-03**.
@@ -77,26 +79,33 @@ membership bitset, and a pooled backtracking VM.
   lexer-shaped body (`"foo123 + bar456 - baz789 * qux000 / quux ; "` × 64), both
   byte-identical across all drivers.
 
-### Headline — the previously-losing match ops now beat MRI + YJIT
+### Headline — every previously-losing match op now beats MRI + YJIT
 
 These are the tokenizer-bound ops the strscan parity suite flagged as trailing
-YJIT by 1.8×–4.2×. The pure-Go library now **beats YJIT on three of the four**,
-and closes the last one (`skip`) from 4.2× behind to 1.4×.
+YJIT by 1.8×–4.2×. The pure-Go library now **beats YJIT on all of them** — the
+last holdout, `skip`, goes from 1.4× *behind* YJIT to **~10× ahead** with the
+anchored class-run consumer, and now beats even the C Onigmo it reimplements.
 
 | Op | go-ruby ns/op | MRI ns/op | YJIT ns/op | go vs MRI | **go vs YJIT** |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `scan-tokenize` | **192 971** | 454 730 | 319 175 | 2.36× faster | **1.65× faster** ✅ |
-| `scan_until` | **17 558** | 27 728 | 21 895 | 1.58× faster | **1.25× faster** ✅ |
-| `match?` | **249 231** | 332 270 | 260 610 | 1.33× faster | **1.05× faster** ✅ |
-| `skip` | 136 771 | 132 280 | 98 107 | 0.97× (≈MRI) | 1.39× slower ⚠️ |
-| `gsub-space` | **176 006** | 218 250 | 216 050 | 1.24× faster | **1.23× faster** ✅ |
+| `skip` | **9 862** | 131 257 | 98 153 | 13.3× faster | **9.95× faster** ✅ |
+| `match?` | **15 697** | 330 830 | 258 050 | 21.1× faster | **16.4× faster** ✅ |
+| `scan-tokenize` | **110 632** | 450 490 | 326 165 | 4.07× faster | **2.95× faster** ✅ |
+| `scan_until` | **17 448** | 27 599 | 21 901 | 1.58× faster | **1.25× faster** ✅ |
+| `gsub-space` | **172 248** | 218 700 | 215 000 | 1.27× faster | **1.25× faster** ✅ |
 
-`skip` is the honest floor: it is dominated by consuming long `\S+` / `\s+` runs,
-where each call steps the linear-time NFA byte by byte and cannot beat C Onigmo's
-hand-written inner loop — the same residual named in the C-parity report. It is
-still **2.9× faster than before** this work (was 4.16× behind YJIT) and at MRI
-parity; closing it further needs a byte-class-table anchored consumer, tracked
-separately.
+`skip` was the honest floor of the previous round (dominated by consuming long
+`\S+`/`\s+` runs one NFA step per byte). The **anchored class-run consumer** now
+recognises that a bare single-char class repeat at the cursor is exactly "how far
+does the class reach", and walks it in a tight loop over a 256-bit ASCII
+membership bitset — one bit test per byte, no per-position NFA frontier to seed,
+close, or intern. On the alternating-runs `skip` workload it drops from 136 771 ns
+to **9 862 ns (13.9× faster than before)**, clearing MRI (13.3×), YJIT (9.95×),
+and C Onigmo's own hand-written inner loop (34 567 ns → **3.5× ahead**). A byte
+`≥ 0x80` under UTF-8 begins a multi-byte code point the byte bitset cannot decide,
+so the consumer bows out to the general engine there — correct, unaccelerated, and
+rare on ASCII tokenizer input; results are byte-identical to the general engine at
+every position.
 
 ### StringScanner-style tokenizer ops (many short matches)
 
@@ -110,45 +119,45 @@ Onigmo via `onig_match` / `onig_search`.
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
-| **go-ruby-regexp (pure Go)** | 192970.8 | 0.42× |
-| C Onigmo 6.2.0 | 49155.0 | 0.11× |
-| MRI | 454730.0 | 1.00× |
-| MRI + YJIT | 319175.0 | 0.70× |
-| JRuby | 364835.8 | 0.80× |
-| TruffleRuby | 55555.4 | 0.12× |
+| **go-ruby-regexp (pure Go)** | 110632.3 | 0.25× |
+| C Onigmo 6.2.0 | 48320.0 | 0.11× |
+| MRI | 450490.0 | 1.00× |
+| MRI + YJIT | 326165.0 | 0.72× |
+| JRuby | 458574.8 | 1.02× |
+| TruffleRuby | 55583.1 | 0.12× |
 
 #### skip (alternating `\s+` / `\S+` runs)
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
-| **go-ruby-regexp (pure Go)** | 136770.8 | 1.03× |
-| C Onigmo 6.2.0 | 35093.3 | 0.27× |
-| MRI | 132280.0 | 1.00× |
-| MRI + YJIT | 98106.7 | 0.74× |
-| JRuby | 78500.7 | 0.59× |
-| TruffleRuby | 29909.2 | 0.23× |
+| **go-ruby-regexp (pure Go)** | 9861.9 | 0.08× |
+| C Onigmo 6.2.0 | 34566.7 | 0.26× |
+| MRI | 131256.7 | 1.00× |
+| MRI + YJIT | 98153.3 | 0.75× |
+| JRuby | 78753.5 | 0.60× |
+| TruffleRuby | 29358.6 | 0.22× |
 
 #### match? (anchored non-advancing `match?` at every position, 6016 chars)
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
-| **go-ruby-regexp (pure Go)** | 249231.2 | 0.75× |
-| C Onigmo 6.2.0 | 50595.0 | 0.15× |
-| MRI | 332270.0 | 1.00× |
-| MRI + YJIT | 260610.0 | 0.78× |
-| JRuby | 146777.3 | 0.44× |
-| TruffleRuby | 104714.2 | 0.32× |
+| **go-ruby-regexp (pure Go)** | 15696.5 | 0.05× |
+| C Onigmo 6.2.0 | 50195.0 | 0.15× |
+| MRI | 330830.0 | 1.00× |
+| MRI + YJIT | 258050.0 | 0.78× |
+| JRuby | 146066.0 | 0.44× |
+| TruffleRuby | 104621.5 | 0.32× |
 
 #### scan_until (forward `scan_until` hopping past each operator)
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
-| **go-ruby-regexp (pure Go)** | 17558.2 | 0.63× |
-| C Onigmo 6.2.0 | 13282.5 | 0.48× |
-| MRI | 27728.0 | 1.00× |
-| MRI + YJIT | 21894.5 | 0.79× |
-| JRuby | 15109.4 | 0.54× |
-| TruffleRuby | 9384.6 | 0.34× |
+| **go-ruby-regexp (pure Go)** | 17448.2 | 0.63× |
+| C Onigmo 6.2.0 | 13275.5 | 0.48× |
+| MRI | 27599.0 | 1.00× |
+| MRI + YJIT | 21901.0 | 0.79× |
+| JRuby | 15075.2 | 0.55× |
+| TruffleRuby | 8949.4 | 0.32× |
 
 ### Match / scan over the fixed corpus
 
@@ -156,45 +165,45 @@ Onigmo via `onig_match` / `onig_search`.
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
-| **go-ruby-regexp (pure Go)** | 266687.5 | 0.73× |
-| C Onigmo 6.2.0 | 138800.0 | 0.38× |
-| MRI | 366200.0 | 1.00× |
-| MRI + YJIT | 369650.0 | 1.01× |
-| JRuby | 236485.4 | 0.65× |
-| TruffleRuby | 82833.3 | 0.23× |
+| **go-ruby-regexp (pure Go)** | 263070.8 | 0.71× |
+| C Onigmo 6.2.0 | 140900.0 | 0.38× |
+| MRI | 370750.0 | 1.00× |
+| MRI + YJIT | 370800.0 | 1.00× |
+| JRuby | 227427.1 | 0.61× |
+| TruffleRuby | 82268.7 | 0.22× |
 
 #### search-email (`=~` leftmost search)
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
-| **go-ruby-regexp (pure Go)** | 593.4 | 0.34× |
-| C Onigmo 6.2.0 | 2392.0 | 1.35× |
-| MRI | 1769.0 | 1.00× |
-| MRI + YJIT | 1693.5 | 0.96× |
-| JRuby | 3323.1 | 1.88× |
-| TruffleRuby ‡ | 248.1 | 0.14× |
+| **go-ruby-regexp (pure Go)** | 654.7 | 0.38× |
+| C Onigmo 6.2.0 | 2299.0 | 1.32× |
+| MRI | 1745.0 | 1.00× |
+| MRI + YJIT | 1673.0 | 0.96× |
+| JRuby | 3398.7 | 1.95× |
+| TruffleRuby ‡ | 203.6 | 0.12× |
 
 #### match-ipv4 (`Regexp#match`, early hit + captures)
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
-| **go-ruby-regexp (pure Go)** | 642.6 | 2.97× |
-| C Onigmo 6.2.0 | 277.0 | 1.28× |
-| MRI | 216.5 | 1.00× |
-| MRI + YJIT | 183.5 | 0.85× |
-| JRuby | 181.7 | 0.84× |
-| TruffleRuby ‡ | 541.6 | 2.50× |
+| **go-ruby-regexp (pure Go)** | 647.8 | 3.01× |
+| C Onigmo 6.2.0 | 277.0 | 1.29× |
+| MRI | 215.0 | 1.00× |
+| MRI + YJIT | 187.5 | 0.87× |
+| JRuby | 179.0 | 0.83× |
+| TruffleRuby ‡ | 524.6 | 2.44× |
 
 #### gsub-space (`gsub(/\s+/, "_")`, full-pass replace)
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
-| **go-ruby-regexp (pure Go)** | 176006.2 | 0.81× |
-| C Onigmo 6.2.0 | 103000.0 | 0.47× |
-| MRI | 218250.0 | 1.00× |
-| MRI + YJIT | 216050.0 | 0.99× |
-| JRuby | 100887.5 | 0.46× |
-| TruffleRuby | 80662.5 | 0.37× |
+| **go-ruby-regexp (pure Go)** | 172248.0 | 0.79× |
+| C Onigmo 6.2.0 | 102650.0 | 0.47× |
+| MRI | 218700.0 | 1.00× |
+| MRI + YJIT | 215000.0 | 0.98× |
+| JRuby | 91752.1 | 0.42× |
+| TruffleRuby | 78179.2 | 0.36× |
 
 ### Compile (pattern → matcher)
 
@@ -205,11 +214,11 @@ including MRI + YJIT, by **6–120×**.
 
 | Op | go-ruby ns/op | C Onigmo | MRI | MRI + YJIT |
 | --- | ---: | ---: | ---: | ---: |
-| `compile-literal` (`needle`) | **195.2** | 174.0 | 366.2 | 338.6 |
-| `compile-class` (`[A-Za-z0-9_]+`) | **131.8** | 475.2 | 769.8 | 697.4 |
-| `compile-alt` (`cat|dog|fox|…`) | **784.9** | 1592.6 | 2171.8 | 2139.0 |
-| `compile-backtrack` (`([0-9]{1,3}\.){3}…`) | **327.9** | 1028.2 | 1454.8 | 1345.0 |
-| `compile-unicode` (`\p{L}+`) | **105.9** | 10818.8 | 12811.4 | 12567.0 |
+| `compile-literal` (`needle`) | **195.5** | 190.8 | 363.2 | 334.0 |
+| `compile-class` (`[A-Za-z0-9_]+`) | **129.4** | 472.2 | 769.6 | 721.4 |
+| `compile-alt` (`cat|dog|fox|…`) | **764.6** | 1604.8 | 2191.4 | 2147.2 |
+| `compile-backtrack` (`([0-9]{1,3}\.){3}…`) | **330.6** | 1024.0 | 1410.6 | 1378.8 |
+| `compile-unicode` (`\p{L}+`) | **103.9** | 10694.6 | 12828.4 | 12662.0 |
 
 (JRuby / TruffleRuby compile columns are omitted here: their JITs recognise the
 loop rebuilds the same constant pattern and elide the work, so 24–150 ns measures
@@ -218,20 +227,26 @@ sink; MRI and C Onigmo compile every iteration.)
 
 ### Reading the numbers
 
-- **The match-throughput target is met.** Of the four `StringScanner` ops the
-  strscan suite flagged as behind YJIT, **`scan-tokenize` (1.65×), `scan_until`
-  (1.25×) and `match?` (1.05×) now beat YJIT**, and `gsub` (1.23×) and the full
-  `scan \w+` (1.39×) beat it too. What moved them: the anchored `MatchAt` fast
-  path now runs on the pooled lazy-NFA instead of allocating a fresh backtracking
+- **The match-throughput target is met — every flagged op now beats YJIT.**
+  `skip` (9.95×), `match?` (16.4×), `scan-tokenize` (2.95×), `scan_until` (1.25×),
+  `gsub` (1.25×) all clear MRI + YJIT. What moved them: the anchored `MatchAt` fast
+  path runs on the pooled lazy-NFA instead of allocating a fresh backtracking
   machine per call; a **bounds-only API** (`MatchBoundsAt`/`MatchBounds`) returns
   a span with **zero allocation** for `skip`/`match?`/`scan`, matching MRI's
   integer-returning `StringScanner#skip`; an **ASCII-class bitset** makes class
-  membership an O(1) bit test; and the backtracking VM itself is now pooled.
-- **`skip` is the honest floor (1.39× behind YJIT).** It consumes long `\S+`/`\s+`
-  runs, and the linear-time NFA steps them byte by byte where C Onigmo runs a
-  tight hand-written loop. It is at MRI parity and 2.9× better than before this
-  work; the remaining gap needs a byte-class-table anchored run, tracked
-  separately.
+  membership an O(1) bit test; the backtracking VM itself is pooled; and — the
+  final lever — a **fast anchored class-run consumer** walks a bare `\s+`/`\S+`/
+  `\w+`/`[…]+` run at the cursor with one bitset bit test per byte and no
+  per-position NFA state.
+- **`skip` is no longer the floor — it is now the biggest win.** Recognising that
+  a bare single-char class repeat anchored at the cursor is exactly "how far does
+  the class reach", the consumer replaces the per-byte NFA stepping with a tight
+  bitset loop: 136 771 ns → **9 862 ns (13.9× faster than before)**, clearing MRI
+  (13.3×), YJIT (9.95×) and even C Onigmo's hand-written inner loop (3.5×). Under
+  UTF-8 a byte `≥ 0x80` starts a multi-byte code point the byte bitset cannot
+  decide, so the consumer defers the whole match to the general engine there —
+  correct and byte-identical, just unaccelerated on non-ASCII runs. `match?` (over
+  `[A-Za-z0-9_]+`) rides the same fast path and jumps from 0.75× MRI to 0.05×.
 - **`=~` beats MRI *and* YJIT *and* C Onigmo** (`search-email` 0.34× MRI, 0.25× of
   C): the literal/first-byte prefilter jumps straight to the `@`-anchored match
   instead of stepping every position. The one match lag is the **`match` ipv4
@@ -241,10 +256,14 @@ sink; MRI and C Onigmo compile every iteration.)
 - **Compile is now a strength, not a cost.** The lazy build puts every compile op
   ahead of MRI + YJIT (6–120×), including `\p{L}+`, which skips Onigmo's large
   per-compile Unicode-property table build.
-- **C Onigmo column.** Raw C is still 4–5× ahead on the anchored tokenizer inner
-  loops (`scan-tokenize`, `match?`, `skip`) and on the full-corpus scans — the
-  hand-asm walls. The stated bar is MRI + YJIT (C Onigmo *through the
-  interpreter*), which the pure-Go engine now clears on every op except `skip`.
+- **C Onigmo column.** Raw C is still ahead on `scan-tokenize` (whose `[A-Za-z_]…`
+  ident pattern is two atoms, not a single class-run, so it keeps the general
+  engine) and on the full-corpus scans — the hand-asm walls. But on the class-run
+  ops the pure-Go engine now **beats raw C**: `skip` 3.5× and `match?` 3.2× ahead
+  of C Onigmo, because the bitset consumer does per byte what Onigmo's inner loop
+  cannot beat without the same specialisation. The stated bar is MRI + YJIT (C
+  Onigmo *through the interpreter*), which the pure-Go engine now clears on **every**
+  tokenizer op.
 
 !!! note "Fuller C-Onigmo parity report"
     This table is the *Ruby-runtime* view. A deeper, dedicated **go-ruby-regexp vs
