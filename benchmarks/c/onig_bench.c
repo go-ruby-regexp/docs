@@ -41,6 +41,11 @@ static const char *NEEDLE = "ZZZ_END_NEEDLE_ZZZ";
 static char *corpus;      /* built at startup */
 static size_t corpus_len;
 
+/* LEXBLOCK MUST be byte-identical to LEXER in ../ruby/regexp.rb and ../go/main.go. */
+static const char *LEXBLOCK = "foo123 + bar456 - baz789 * qux000 / quux ; ";
+static char *lexer;       /* the lexer-shaped corpus for the tokenizer ops */
+static size_t lexer_len;
+
 static void build_corpus(void) {
   size_t bl = strlen(BLOCK), nl = strlen(NEEDLE);
   corpus_len = bl * 48 + nl;
@@ -49,6 +54,13 @@ static void build_corpus(void) {
   for (int i = 0; i < 48; i++) { memcpy(corpus + o, BLOCK, bl); o += bl; }
   memcpy(corpus + o, NEEDLE, nl);
   corpus[corpus_len] = '\0';
+
+  size_t xl = strlen(LEXBLOCK);
+  lexer_len = xl * 64;
+  lexer = malloc(lexer_len + 1);
+  o = 0;
+  for (int i = 0; i < 64; i++) { memcpy(lexer + o, LEXBLOCK, xl); o += xl; }
+  lexer[lexer_len] = '\0';
 }
 
 /* 32-bit FNV-1a — identical arithmetic to the Go and Ruby drivers. */
@@ -121,6 +133,76 @@ static uint32_t op_gsub_space(regex_t *reg, OnigRegion *region, char *out) {
   return fnv1a((const unsigned char *)out, o);
 }
 
+/* --- StringScanner-style tokenizer ops over the lexer corpus -------------- */
+/* Anchored match at pos (StringScanner's cursor primitive): onig_match matches
+ * only at `at`, filling region; returns 1 and the match end on a hit. */
+static regex_t *re_ident, *re_num, *re_ws, *re_op, *re_tword, *re_nonws;
+
+static int lex_match_at(regex_t *reg, OnigRegion *region, size_t pos, long *e) {
+  const UChar *s = (const UChar *)lexer, *end = s + lexer_len;
+  int r = onig_match(reg, s, end, s + pos, region, ONIG_OPTION_NONE);
+  if (r < 0) return 0;
+  *e = region->end[0];
+  return 1;
+}
+
+/* scan-tokenize: anchored match per token from an advancing cursor; count. */
+static long op_scan_tokenize(OnigRegion *region) {
+  regex_t *pats[4] = {re_ident, re_num, re_ws, re_op};
+  long n = 0; size_t pos = 0;
+  while (pos < lexer_len) {
+    int matched = 0;
+    for (int i = 0; i < 4; i++) {
+      long e;
+      if (lex_match_at(pats[i], region, pos, &e) && (size_t)e > pos) {
+        pos = (size_t)e; n++; matched = 1; break;
+      }
+    }
+    if (!matched) pos++;
+  }
+  return n;
+}
+
+/* skip: alternate whitespace / non-whitespace runs; total bytes skipped. */
+static long op_skip(OnigRegion *region) {
+  long total = 0; size_t pos = 0;
+  while (pos < lexer_len) {
+    long e;
+    if (lex_match_at(re_ws, region, pos, &e) && (size_t)e > pos) {
+      total += (long)((size_t)e - pos); pos = (size_t)e;
+    } else if (lex_match_at(re_nonws, region, pos, &e) && (size_t)e > pos) {
+      total += (long)((size_t)e - pos); pos = (size_t)e;
+    } else {
+      pos++;
+    }
+  }
+  return total;
+}
+
+/* match?: anchored, non-advancing, at every position; sum of matched lengths. */
+static long op_match_q(OnigRegion *region) {
+  long n = 0;
+  for (size_t pos = 0; pos < lexer_len; pos++) {
+    long e;
+    if (lex_match_at(re_tword, region, pos, &e)) n += (long)((size_t)e - pos);
+  }
+  return n;
+}
+
+/* scan_until: forward search to and past each operator; total bytes returned. */
+static long op_scan_until(OnigRegion *region) {
+  const UChar *s = (const UChar *)lexer, *end = s + lexer_len;
+  long total = 0; size_t pos = 0;
+  while (pos < lexer_len) {
+    int r = onig_search(re_op, s, end, s + pos, end, region, ONIG_OPTION_NONE);
+    if (r < 0) break;
+    long e = region->end[0];
+    total += (long)((size_t)e - pos);
+    pos = (size_t)e;
+  }
+  return total;
+}
+
 /* timing harness mirroring _harness.rb / bench.go. */
 #define BENCH(label, inner, CODE)                                        \
   do {                                                                   \
@@ -146,6 +228,12 @@ int main(int argc, char **argv) {
   regex_t *re_email = compile_once("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}");
   regex_t *re_ipv4 = compile_once("([0-9]{1,3}\\.){3}[0-9]{1,3}");
   regex_t *re_space = compile_once("\\s+");
+  re_ident = compile_once("[A-Za-z_][A-Za-z0-9_]*");
+  re_num = compile_once("[0-9]+");
+  re_ws = compile_once("\\s+");
+  re_op = compile_once("[-+*/;]");
+  re_tword = compile_once("[A-Za-z0-9_]+");
+  re_nonws = compile_once("\\S+");
   OnigRegion *region = onig_region_new();
   char *gbuf = malloc(corpus_len * 2 + 16);
 
@@ -166,6 +254,10 @@ int main(int argc, char **argv) {
     printf("VERIFY\tsearch-email\t%ld\n", mb);
     printf("VERIFY\tmatch-ipv4\t%ld:%.*s\n", eb, (int)(ee - eb), corpus + eb);
     printf("VERIFY\tgsub-space\t%u\n", op_gsub_space(re_space, region, gbuf));
+    printf("VERIFY\tscan-tokenize\t%ld\n", op_scan_tokenize(region));
+    printf("VERIFY\tskip\t%ld\n", op_skip(region));
+    printf("VERIFY\tmatch?\t%ld\n", op_match_q(region));
+    printf("VERIFY\tscan_until\t%ld\n", op_scan_until(region));
     free(join);
     return 0;
   }
@@ -181,9 +273,16 @@ int main(int argc, char **argv) {
   BENCH("match-ipv4",   2000, { sink = op_match_ipv4(re_ipv4, region); });
   BENCH("gsub-space",   20,   { sink = (long)op_gsub_space(re_space, region, gbuf); });
 
+  BENCH("scan-tokenize", 200,  { sink = op_scan_tokenize(region); });
+  BENCH("skip",          300,  { sink = op_skip(region); });
+  BENCH("match?",        200,  { sink = op_match_q(region); });
+  BENCH("scan_until",    2000, { sink = op_scan_until(region); });
+
   onig_region_free(region, 1);
   onig_free(re_word); onig_free(re_email); onig_free(re_ipv4); onig_free(re_space);
-  free(gbuf); free(corpus);
+  onig_free(re_ident); onig_free(re_num); onig_free(re_ws); onig_free(re_op);
+  onig_free(re_tword); onig_free(re_nonws);
+  free(gbuf); free(corpus); free(lexer);
   onig_end();
   return 0;
 }
