@@ -31,6 +31,90 @@ var (
 	reSpace = mustCompile(`\s+`)
 )
 
+// lexer is the lexer-shaped corpus for the StringScanner-style tokenizer ops
+// below — the many-short-matches workload where the engine's per-call cost, not
+// the match itself, dominates. It is byte-identical to LEXER in ../ruby/regexp.rb
+// and ../c/onig_bench.c.
+var lexer = strings.Repeat("foo123 + bar456 - baz789 * qux000 / quux ; ", 64)
+
+var (
+	reIdent = mustCompile(`[A-Za-z_][A-Za-z0-9_]*`)
+	reNum   = mustCompile(`[0-9]+`)
+	reWS    = mustCompile(`\s+`)
+	reOp    = mustCompile(`[-+*/;]`)
+	reTWord = mustCompile(`[A-Za-z0-9_]+`)
+	reNonWS = mustCompile(`\S+`)
+)
+
+// opScanTokenize is the classic StringScanner lexer loop: anchored match per token
+// from an advancing cursor until end of input; result = tokens consumed. It uses
+// the bounds-only MatchBoundsAt primitive (no MatchData), the fast path for a
+// tokenizer that only needs each token's span.
+func opScanTokenize() int {
+	pats := []*regexp.Regexp{reIdent, reNum, reWS, reOp}
+	pos, n := 0, 0
+	for pos < len(lexer) {
+		matched := false
+		for _, re := range pats {
+			if _, e, ok := re.MatchBoundsAt(lexer, pos); ok && e > pos {
+				pos = e
+				n++
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			pos++
+		}
+	}
+	return n
+}
+
+// opSkip alternates whitespace / non-whitespace runs (StringScanner#skip);
+// result = total bytes skipped (== len(lexer)).
+func opSkip() int {
+	pos, total := 0, 0
+	for pos < len(lexer) {
+		if _, e, ok := reWS.MatchBoundsAt(lexer, pos); ok && e > pos {
+			total += e - pos
+			pos = e
+		} else if _, e, ok := reNonWS.MatchBoundsAt(lexer, pos); ok && e > pos {
+			total += e - pos
+			pos = e
+		} else {
+			pos++
+		}
+	}
+	return total
+}
+
+// opMatchQ is anchored, non-advancing match? at every character position
+// (StringScanner#match?); result = sum of matched lengths.
+func opMatchQ() int {
+	n := 0
+	for pos := 0; pos < len(lexer); pos++ {
+		if b, e, ok := reTWord.MatchBoundsAt(lexer, pos); ok {
+			n += e - b
+		}
+	}
+	return n
+}
+
+// opScanUntil hops forward to and past each operator (StringScanner#scan_until);
+// result = total bytes returned across all hops.
+func opScanUntil() int {
+	pos, total := 0, 0
+	for pos < len(lexer) {
+		_, e, ok := reOp.MatchBounds(lexer[pos:])
+		if !ok {
+			break
+		}
+		total += e
+		pos += e
+	}
+	return total
+}
+
 func mustCompile(p string) *regexp.Regexp {
 	r, err := regexp.Compile(p)
 	if err != nil {
@@ -104,6 +188,10 @@ func main() {
 		fmt.Printf("VERIFY\tsearch-email\t%d\n", me.Begin(0))
 		fmt.Printf("VERIFY\tmatch-ipv4\t%d:%s\n", mi.Begin(0), mi.Str(0))
 		fmt.Printf("VERIFY\tgsub-space\t%d\n", fnv1a(gsub(reSpace, corpus, "_")))
+		fmt.Printf("VERIFY\tscan-tokenize\t%d\n", opScanTokenize())
+		fmt.Printf("VERIFY\tskip\t%d\n", opSkip())
+		fmt.Printf("VERIFY\tmatch?\t%d\n", opMatchQ())
+		fmt.Printf("VERIFY\tscan_until\t%d\n", opScanUntil())
 		return
 	}
 
@@ -119,4 +207,11 @@ func main() {
 	bench("search-email", 2000, func() { sink = reEmail.Match(corpus).Begin(0) })
 	bench("match-ipv4", 2000, func() { sink = reIPv4.Match(corpus) })
 	bench("gsub-space", 20, func() { sink = gsub(reSpace, corpus, "_") })
+
+	// StringScanner-style tokenizer ops: the many-short-matches workload where the
+	// engine's per-call setup dominates (the previously-losing scan ops).
+	bench("scan-tokenize", 200, func() { sink = opScanTokenize() })
+	bench("skip", 300, func() { sink = opSkip() })
+	bench("match?", 200, func() { sink = opMatchQ() })
+	bench("scan_until", 2000, func() { sink = opScanUntil() })
 }

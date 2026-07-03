@@ -1,3 +1,4 @@
 .work/
 onig_bench
+go/bench
 *.o
