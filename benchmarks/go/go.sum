@@ -10,3 +10,5 @@ github.com/go-ruby-regexp/regexp v0.0.0-20260807185050-0533785e97b7 h1:80wVgqj9U
 github.com/go-ruby-regexp/regexp v0.0.0-20260807185050-0533785e97b7/go.mod h1:Xgx6MB0JFe/GEd9ANJli4TvzQt2mekfp44bFkMet+js=
 github.com/go-ruby-regexp/regexp v0.0.0-20260831115702-e14375e92d68 h1:Jw8B4iEM1qD4Jp2EhcSoZAmBgs/ZDVJW/kRyCtfqIy0=
 github.com/go-ruby-regexp/regexp v0.0.0-20260831115702-e14375e92d68/go.mod h1:I3i2r1AXulgMBt/KiWBcxjnoNsB09ZFKkj2Vb5Mhzuw=
+github.com/go-ruby-regexp/regexp v0.0.0-20261004234638-f6c270aae786 h1:TSsdSoxOJ9Mw38V+v+IhIW+UN8lt6TmSSGoBFXi7YwU=
+github.com/go-ruby-regexp/regexp v0.0.0-20261004234638-f6c270aae786/go.mod h1:mmO9q0y/Hpvo9+wI4sis37gnLcm58Uqz1DUAdDBxoxc=
