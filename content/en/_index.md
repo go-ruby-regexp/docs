@@ -1,4 +1,9 @@
-# go-ruby-regexp documentation
+---
+title: "Home"
+weight: 10
+---
+
+# go-ruby-regexp documentation {#go-ruby-regexp-documentation}
 
 **A pure-Go reimplementation of Onigmo** — the regular-expression engine that
 Ruby uses — built as a **backtracking VM** with **zero cgo**.
@@ -17,24 +22,27 @@ also the regexp backend for [go-embedded-ruby](https://github.com/go-embedded-ru
 where a thin adapter maps Ruby's `Regexp`/`MatchData` onto this engine. The
 module path is `github.com/go-ruby-regexp/regexp`.
 
-!!! success "Status: Phases 0–4 complete — the engine roadmap is done"
-    The standalone engine roadmap (Phases 0–4) is **complete**: a backtracking VM
-    with leftmost-first semantics covering literals/escapes, `.`, character
-    classes (incl. POSIX `[[:alpha:]]` and multibyte members `[é]` / `[à-ï]`),
-    anchors, **every quantifier mode** (greedy, lazy, possessive `*+ ++ ?+`,
-    atomic groups `(?>…)`), capturing/non-capturing/named groups, alternation,
-    **backreferences `\1` / `\k<name>`**, **lookahead and fixed/bounded-width
-    lookbehind**, `\G`, **recursive subexpression calls `\g<…>`**, inline flags
-    `(?imx)`, **`\p{…}` Unicode properties**, rune-level `/i` case folding, `\h` /
-    `\H`, `\R`, and **UTF-8 / ASCII-8BIT multi-encoding** with a char-advancing
-    `.`. ReDoS-hardened (memoization + step budget + recursion cap +
-    `WithTimeout`) with a **start-position / interior-literal optimizer**
-    (up to ~210× faster) and a benchmark suite — differential-tested against MRI,
-    100% coverage, CI green across 6 arches. The [Roadmap](roadmap.md) records the
-    documented out-of-scope boundaries; Phase 5 (the Ruby surface) is downstream
-    in the go-embedded-ruby adapter, not in this engine module.
+{{< callout type="info" >}}
+**Status: Phases 0–4 complete — the engine roadmap is done**
 
-## Performance
+The standalone engine roadmap (Phases 0–4) is **complete**: a backtracking VM
+with leftmost-first semantics covering literals/escapes, `.`, character
+classes (incl. POSIX `[[:alpha:]]` and multibyte members `[é]` / `[à-ï]`),
+anchors, **every quantifier mode** (greedy, lazy, possessive `*+ ++ ?+`,
+atomic groups `(?>…)`), capturing/non-capturing/named groups, alternation,
+**backreferences `\1` / `\k<name>`**, **lookahead and fixed/bounded-width
+lookbehind**, `\G`, **recursive subexpression calls `\g<…>`**, inline flags
+`(?imx)`, **`\p{…}` Unicode properties**, rune-level `/i` case folding, `\h` /
+`\H`, `\R`, and **UTF-8 / ASCII-8BIT multi-encoding** with a char-advancing
+`.`. ReDoS-hardened (memoization + step budget + recursion cap +
+`WithTimeout`) with a **start-position / interior-literal optimizer**
+(up to ~210× faster) and a benchmark suite — differential-tested against MRI,
+100% coverage, CI green across 6 arches. The [Roadmap]({{< relref "roadmap.md" >}}) records the
+documented out-of-scope boundaries; Phase 5 (the Ruby surface) is downstream
+in the go-embedded-ruby adapter, not in this engine module.
+{{< /callout >}}
+
+## Performance {#performance}
 
 The engine is measured against the bar it reimplements — **C Onigmo** — and
 against Go's stdlib `regexp` (**RE2**). Honest wins and losses (Apple M4 Max,
@@ -67,7 +75,7 @@ single core; full numbers in
   the bare NFA. The residual gap is early-hit micro-cases, where C's per-call
   setup is cheaper than warming the table.
 
-## Repositories
+## Repositories {#repositories}
 
 | Repo | What it is |
 | --- | --- |
@@ -76,7 +84,7 @@ single core; full numbers in
 | [`go-ruby-regexp.github.io`](https://github.com/go-ruby-regexp/go-ruby-regexp.github.io) | the organization landing page (Hugo) |
 | [`brand`](https://github.com/go-ruby-regexp/brand) | logo and brand assets |
 
-## What it is
+## What it is {#what-it-is}
 
 - A **backtracking VM** faithful to Onigmo, so Ruby-compatible features and
   semantics are expressible.
@@ -86,7 +94,7 @@ single core; full numbers in
 - **ReDoS-aware**: memoization plus a deterministic timeout/step budget, in the
   spirit of Ruby ≥3.2.
 
-## What it is not
+## What it is not {#what-it-is-not}
 
 - **Not** an RE2 replacement. Its source-of-truth matcher is a backtracking VM,
   so it does not guarantee linear time; instead it bounds pathological matching
@@ -98,13 +106,13 @@ single core; full numbers in
   (Ruby) syntax and semantics.
 - **Not** dependent on go-embedded-ruby; the dependency runs the other way.
 
-## Where to go next
+## Where to go next {#where-to-go-next}
 
-- [Why a backtracking engine](why.md) — what RE2 cannot express and why
+- [Why a backtracking engine]({{< relref "why.md" >}}) — what RE2 cannot express and why
   backtracking is required for byte-compatible Ruby regexps.
-- [Architecture overview](architecture/index.md) — the pipeline and the packages
+- [Architecture overview]({{< relref "architecture/_index.md" >}}) — the pipeline and the packages
   that make it up.
-- [Roadmap (phases)](roadmap.md) — the six phases from scanner to full Ruby
+- [Roadmap (phases)]({{< relref "roadmap.md" >}}) — the six phases from scanner to full Ruby
   surface.
 
 Source lives at

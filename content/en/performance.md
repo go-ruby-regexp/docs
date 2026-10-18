@@ -1,11 +1,16 @@
-# Performance
+---
+title: "Performance"
+weight: 90
+---
+
+# Performance {#performance}
 
 `go-ruby-regexp/regexp` is the pure-Go library that
 [`rbgo`](https://github.com/go-embedded-ruby/ruby) binds for Ruby's `regexp`. This
 page records a **comparative benchmark** of that module against the reference
 Ruby runtimes, part of the ecosystem-wide per-module parity suite.
 
-## What is measured
+## What is measured {#what-is-measured}
 
 The **same** Ruby script — compile a tokenizer pattern and `scan` it over a body of source text — is run under every runtime. `rbgo`'s
 number reflects **this pure-Go library doing the work**; every other column is
@@ -24,7 +29,7 @@ before timing.
   (`regexp.rb` + `run.sh`). Reproduce:
   `RBGO=./rbgo TRUFFLE=truffleruby bash bench/modules/run.sh 5`.
 
-## Result (best of 5, ms)
+## Result (best of 5, ms) {#result-best-of-5-ms}
 
 | Runtime | time | vs MRI |
 | --- | ---: | ---: |
@@ -36,15 +41,18 @@ before timing.
 
 rbgo runs on **go-ruby-regexp** (a pure-Go Onigmo). On this tokenize loop it is ~1.8x MRI's C Onigmo — near parity for a from-scratch pure-Go engine. TruffleRuby's native JIT wins this compute-bound string row (340 ms).
 
-!!! note "Honest framing"
-    JRuby and TruffleRuby are timed **cold, single-shot**, so they carry JVM /
-    Graal startup on every run — read them as one-shot `ruby file.rb` costs, the
-    same way `rbgo` and MRI are measured, not as steady-state JIT numbers. Rows
-    that complete in well under ~200 ms carry the most relative noise; treat
-    their ratios as order-of-magnitude. These are real measured numbers from the
-    2026-06-29 run — nothing is cherry-picked.
+{{< callout type="info" >}}
+**Honest framing**
 
-## Library-level benchmark (Go API vs runtimes + C Onigmo) — 2026-07-03
+JRuby and TruffleRuby are timed **cold, single-shot**, so they carry JVM /
+Graal startup on every run — read them as one-shot `ruby file.rb` costs, the
+same way `rbgo` and MRI are measured, not as steady-state JIT numbers. Rows
+that complete in well under ~200 ms carry the most relative noise; treat
+their ratios as order-of-magnitude. These are real measured numbers from the
+2026-06-29 run — nothing is cherry-picked.
+{{< /callout >}}
+
+## Library-level benchmark (Go API vs runtimes + C Onigmo) — 2026-07-03 {#library-level-benchmark-go-api-vs-runtimes-c-onigmo-2026-07-03}
 
 This section measures the **pure-Go library directly, through its Go API** — not
 the `rbgo` interpreter path recorded above. It isolates the regexp primitive from
@@ -79,7 +87,7 @@ cursor with one class-bitset bit test per byte, no per-position NFA state.
   lexer-shaped body (`"foo123 + bar456 - baz789 * qux000 / quux ; "` × 64), both
   byte-identical across all drivers.
 
-### Headline — every previously-losing match op now beats MRI + YJIT
+### Headline — every previously-losing match op now beats MRI + YJIT {#headline-every-previously-losing-match-op-now-beats-mri-yjit}
 
 These are the tokenizer-bound ops the strscan parity suite flagged as trailing
 YJIT by 1.8×–4.2×. The pure-Go library now **beats YJIT on all of them** — the
@@ -107,7 +115,7 @@ so the consumer bows out to the general engine there — correct, unaccelerated,
 rare on ASCII tokenizer input; results are byte-identical to the general engine at
 every position.
 
-### StringScanner-style tokenizer ops (many short matches)
+### StringScanner-style tokenizer ops (many short matches) {#stringscanner-style-tokenizer-ops-many-short-matches}
 
 The classic lexer workload: anchored match from an advancing cursor, thousands of
 short matches per pass. The Go driver drives the engine through the bounds-only
@@ -115,7 +123,7 @@ short matches per pass. The Go driver drives the engine through the bounds-only
 column is that runtime's own `StringScanner` (C Onigmo); the C column is raw
 Onigmo via `onig_match` / `onig_search`.
 
-#### scan-tokenize (anchored `scan` per token, 1280 tokens)
+#### scan-tokenize (anchored `scan` per token, 1280 tokens) {#scan-tokenize-anchored-scan-per-token-1280-tokens}
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
@@ -126,7 +134,7 @@ Onigmo via `onig_match` / `onig_search`.
 | JRuby | 458574.8 | 1.02× |
 | TruffleRuby | 55583.1 | 0.12× |
 
-#### skip (alternating `\s+` / `\S+` runs)
+#### skip (alternating `\s+` / `\S+` runs) {#skip-alternating-s-s-runs}
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
@@ -137,7 +145,7 @@ Onigmo via `onig_match` / `onig_search`.
 | JRuby | 78753.5 | 0.60× |
 | TruffleRuby | 29358.6 | 0.22× |
 
-#### match? (anchored non-advancing `match?` at every position, 6016 chars)
+#### match? (anchored non-advancing `match?` at every position, 6016 chars) {#match-anchored-non-advancing-match-at-every-position-6016-chars}
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
@@ -148,7 +156,7 @@ Onigmo via `onig_match` / `onig_search`.
 | JRuby | 146066.0 | 0.44× |
 | TruffleRuby | 104621.5 | 0.32× |
 
-#### scan_until (forward `scan_until` hopping past each operator)
+#### scan_until (forward `scan_until` hopping past each operator) {#scan_until-forward-scan_until-hopping-past-each-operator}
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
@@ -159,9 +167,9 @@ Onigmo via `onig_match` / `onig_search`.
 | JRuby | 15075.2 | 0.55× |
 | TruffleRuby | 8949.4 | 0.32× |
 
-### Match / scan over the fixed corpus
+### Match / scan over the fixed corpus {#match-scan-over-the-fixed-corpus}
 
-#### scan-word (`\w+` full pass, 2689 matches)
+#### scan-word (`\w+` full pass, 2689 matches) {#scan-word-w-full-pass-2689-matches}
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
@@ -172,7 +180,7 @@ Onigmo via `onig_match` / `onig_search`.
 | JRuby | 227427.1 | 0.61× |
 | TruffleRuby | 82268.7 | 0.22× |
 
-#### search-email (`=~` leftmost search)
+#### search-email (`=~` leftmost search) {#search-email-leftmost-search}
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
@@ -183,7 +191,7 @@ Onigmo via `onig_match` / `onig_search`.
 | JRuby | 3398.7 | 1.95× |
 | TruffleRuby ‡ | 203.6 | 0.12× |
 
-#### match-ipv4 (`Regexp#match`, early hit + captures)
+#### match-ipv4 (`Regexp#match`, early hit + captures) {#match-ipv4-regexpmatch-early-hit-captures}
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
@@ -194,7 +202,7 @@ Onigmo via `onig_match` / `onig_search`.
 | JRuby | 179.0 | 0.83× |
 | TruffleRuby ‡ | 524.6 | 2.44× |
 
-#### gsub-space (`gsub(/\s+/, "_")`, full-pass replace)
+#### gsub-space (`gsub(/\s+/, "_")`, full-pass replace) {#gsub-space-gsubs-full-pass-replace}
 
 | Runtime | ns/op | vs MRI |
 | --- | ---: | ---: |
@@ -205,7 +213,7 @@ Onigmo via `onig_match` / `onig_search`.
 | JRuby | 91752.1 | 0.42× |
 | TruffleRuby | 78179.2 | 0.36× |
 
-### Compile (pattern → matcher)
+### Compile (pattern → matcher) {#compile-pattern-matcher}
 
 The lazy machine build (parse eagerly, defer the program/DFA/prefilter lowering
 to first match) makes compilation cheap: a pattern that is compiled but not yet
@@ -225,7 +233,7 @@ loop rebuilds the same constant pattern and elide the work, so 24–150 ns measu
 an *elided* compile, not real compilation. The Go driver defeats this with a
 sink; MRI and C Onigmo compile every iteration.)
 
-### Reading the numbers
+### Reading the numbers {#reading-the-numbers}
 
 - **The match-throughput target is met — every flagged op now beats YJIT.**
   `skip` (9.95×), `match?` (16.4×), `scan-tokenize` (2.95×), `scan_until` (1.25×),
@@ -265,31 +273,40 @@ sink; MRI and C Onigmo compile every iteration.)
   Onigmo *through the interpreter*), which the pure-Go engine now clears on **every**
   tokenizer op.
 
-!!! note "Fuller C-Onigmo parity report"
-    This table is the *Ruby-runtime* view. A deeper, dedicated **go-ruby-regexp vs
-    C Onigmo vs RE2** parity study — including ReDoS behaviour (C Onigmo times out
-    on `\A(a|aa)+b`; go-ruby-regexp stays linear), structured-scan wins, and the
-    lazy-DFA lever history — lives in the library repo at
-    [`BENCHMARKS.md`](https://github.com/go-ruby-regexp/regexp/blob/main/BENCHMARKS.md).
+{{< callout type="info" >}}
+**Fuller C-Onigmo parity report**
 
-!!! note "Reproduce"
-    The harness is committed under
-    [`benchmarks/`](https://github.com/go-ruby-regexp/docs/tree/main/benchmarks):
-    a self-contained Go driver (`go/`, pins the published library via `go.mod`),
-    the equivalent `ruby/regexp.rb` workload, the C oracle `c/onig_bench.c`, and
-    `run.sh`. Run `bash benchmarks/run.sh`; env `OUTER`/`WARM` tune the pass
-    budget, `RUBY`/`JRUBY`/`TRUFFLERUBY` select runtime binaries, `ONIG_PREFIX`
-    points at a prebuilt Onigmo (else it is built from source), and `SKIP_ONIG=1`
-    drops the C column.
+This table is the *Ruby-runtime* view. A deeper, dedicated **go-ruby-regexp vs
+C Onigmo vs RE2** parity study — including ReDoS behaviour (C Onigmo times out
+on `\A(a|aa)+b`; go-ruby-regexp stays linear), structured-scan wins, and the
+lazy-DFA lever history — lives in the library repo at
+[`BENCHMARKS.md`](https://github.com/go-ruby-regexp/regexp/blob/main/BENCHMARKS.md).
+{{< /callout >}}
 
-!!! warning "Warm-up budget & noise — honest framing"
-    Numbers reflect a **fixed warm-process budget** (3 warm-up + 25 timed passes
-    in one process). The JVM/GraalVM JITs (JRuby, TruffleRuby) may need a larger
-    warm-up to reach steady state, so their columns can **understate** peak
-    throughput on the long loops and carry **cold-JIT noise** on the short ones
-    (marked ‡). Sub-microsecond rows carry the most relative noise; treat those
-    ratios as order-of-magnitude. Every number here is a **real measured value**
-    from the dated run — nothing is fabricated, estimated, or cherry-picked. The
-    go-ruby-regexp column is the pure-Go library; the MRI / YJIT / JRuby /
-    TruffleRuby columns are those interpreters' own `Regexp` / `StringScanner`;
-    the C Onigmo column is the reference library the pure-Go engine reimplements.
+{{< callout type="info" >}}
+**Reproduce**
+
+The harness is committed under
+[`benchmarks/`](https://github.com/go-ruby-regexp/docs/tree/main/benchmarks):
+a self-contained Go driver (`go/`, pins the published library via `go.mod`),
+the equivalent `ruby/regexp.rb` workload, the C oracle `c/onig_bench.c`, and
+`run.sh`. Run `bash benchmarks/run.sh`; env `OUTER`/`WARM` tune the pass
+budget, `RUBY`/`JRUBY`/`TRUFFLERUBY` select runtime binaries, `ONIG_PREFIX`
+points at a prebuilt Onigmo (else it is built from source), and `SKIP_ONIG=1`
+drops the C column.
+{{< /callout >}}
+
+{{< callout type="warning" >}}
+**Warm-up budget & noise — honest framing**
+
+Numbers reflect a **fixed warm-process budget** (3 warm-up + 25 timed passes
+in one process). The JVM/GraalVM JITs (JRuby, TruffleRuby) may need a larger
+warm-up to reach steady state, so their columns can **understate** peak
+throughput on the long loops and carry **cold-JIT noise** on the short ones
+(marked ‡). Sub-microsecond rows carry the most relative noise; treat those
+ratios as order-of-magnitude. Every number here is a **real measured value**
+from the dated run — nothing is fabricated, estimated, or cherry-picked. The
+go-ruby-regexp column is the pure-Go library; the MRI / YJIT / JRuby /
+TruffleRuby columns are those interpreters' own `Regexp` / `StringScanner`;
+the C Onigmo column is the reference library the pure-Go engine reimplements.
+{{< /callout >}}

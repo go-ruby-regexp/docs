@@ -1,11 +1,16 @@
-# Why a backtracking engine
+---
+title: "Why a backtracking engine"
+weight: 20
+---
+
+# Why a backtracking engine {#why-a-backtracking-engine}
 
 Go already ships a regular-expression engine in the standard library, so the
 first question is why `go-ruby-regexp/regexp` does not simply use it. The answer is
 that the standard library is **RE2**, and RE2 makes design choices that are
 incompatible with Ruby's regexps — both in features and in semantics.
 
-## What RE2 (Go's `regexp`) is
+## What RE2 (Go's `regexp`) is {#what-re2-gos-regexp-is}
 
 RE2 compiles a pattern to a finite automaton and simulates it. That buys a strong
 guarantee: matching runs in **time linear** in the length of the input, with no
@@ -22,7 +27,7 @@ anything that cannot be expressed by an automaton:
 For most workloads those trade-offs are exactly right. For *Ruby compatibility*
 they are disqualifying.
 
-## What Onigmo (Ruby) needs that RE2 cannot express
+## What Onigmo (Ruby) needs that RE2 cannot express {#what-onigmo-ruby-needs-that-re2-cannot-express}
 
 Ruby's engine is Onigmo, a backtracking engine in the Perl/Oniguruma family.
 Real Ruby programs rely on constructs that have no automaton encoding:
@@ -62,7 +67,7 @@ Real Ruby programs rely on constructs that have no automaton encoding:
   (`\A \z \Z \G \h \H \R`), `\p{…}` Unicode properties, and per-encoding
   behaviour.
 
-## The consequence
+## The consequence {#the-consequence}
 
 Backreferences and atomic/possessive constructs are not expressible in a finite
 automaton, and Ruby's **leftmost-first** (not leftmost-longest) semantics mean
@@ -73,4 +78,4 @@ engine must explore the search space the way Onigmo does.
 That requires a **backtracking VM**: a program of opcodes executed against the
 input with an explicit backtrack stack. The cost is that naive backtracking can
 blow up exponentially on adversarial patterns — which is why ReDoS hardening is a
-first-class concern; see [ReDoS hardening](architecture/redos.md).
+first-class concern; see [ReDoS hardening]({{< relref "architecture/redos.md" >}}).

@@ -1,20 +1,28 @@
-# API
+---
+title: "API"
+weight: 70
+---
+
+# API {#api}
 
 The public API lives in `regexp.go` at the module root
 (`github.com/go-ruby-regexp/regexp`). It is **Ruby-shaped but Go-idiomatic**: the
 concepts map onto Ruby's `Regexp`/`MatchData`, but the surface follows Go
 conventions (an explicit `error`, byte offsets, value types).
 
-!!! success "Status: implemented"
-    The engine is built — the standalone roadmap (Phases 0–4) is complete and the
-    module is importable as `github.com/go-ruby-regexp/regexp`. The shapes below are the
-    public surface; the replacement DSL and the full Ruby `Regexp`/`MatchData`
-    object surface (Phase 5) live downstream in the go-embedded-ruby adapter. See
-    the [Roadmap](roadmap.md).
+{{< callout type="info" >}}
+**Status: implemented**
 
-## Shape
+The engine is built — the standalone roadmap (Phases 0–4) is complete and the
+module is importable as `github.com/go-ruby-regexp/regexp`. The shapes below are the
+public surface; the replacement DSL and the full Ruby `Regexp`/`MatchData`
+object surface (Phase 5) live downstream in the go-embedded-ruby adapter. See
+the [Roadmap]({{< relref "roadmap.md" >}}).
+{{< /callout >}}
 
-### Compiling
+## Shape {#shape}
+
+### Compiling {#compiling}
 
 - **`Compile(pattern string) (*Regexp, error)`** — parse and compile a pattern
   once in the default UTF-8 encoding; reuse the `*Regexp` for many matches. A
@@ -31,14 +39,14 @@ conventions (an explicit `error`, byte offsets, value types).
 - **`(*Regexp).Encoding() Encoding`** and **`(*Regexp).String() string`** —
   report the input encoding (Ruby's `Regexp#encoding`) and the source pattern.
 
-### Matching
+### Matching {#matching}
 
 - **`(*Regexp).Match(s string) *MatchData`** — search for the leftmost match;
   returns `*MatchData` on success or `nil` on no match (or when the step budget
   or a configured timeout is exceeded).
 - **`(*Regexp).MatchString(s string) bool`** — report whether `s` matches.
 
-### Reading a result
+### Reading a result {#reading-a-result}
 
 `MatchData` holds the byte spans of the whole match (group 0) and of each
 capturing group, by **index and by name**. All offsets are **byte offsets** into
@@ -53,7 +61,7 @@ the input, so callers can map them back onto their own string representation.
 - `NGroups() int` — the number of capturing groups (not counting group 0).
 - `Pre() string` / `Post() string` — the input before and after the whole match.
 
-## Example
+## Example {#example}
 
 ```go
 re, err := onigmo.Compile(`(?<year>\d{4})-(?<mon>\d{2})`)
@@ -66,7 +74,7 @@ bin, _ := onigmo.CompileEnc(`\xC3\xA9`, onigmo.ASCII8BIT)
 safe := re.WithTimeout(100 * time.Millisecond)
 ```
 
-## Relationship to Ruby
+## Relationship to Ruby {#relationship-to-ruby}
 
 A thin adapter in `go-embedded-ruby/ruby/internal/regexp` maps Ruby's `Regexp`
 and `MatchData` objects onto this API. Because `MatchData` already reports byte

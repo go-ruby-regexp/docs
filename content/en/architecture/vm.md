@@ -1,12 +1,17 @@
-# Backtracking VM
+---
+title: "Backtracking VM"
+weight: 50
+---
 
-The `vm` package is the heart of the engine. The [compiler](index.md#packages)
+# Backtracking VM {#backtracking-vm}
+
+The `vm` package is the heart of the engine. The [compiler]({{< relref "_index.md#packages" >}})
 lowers the AST into a **bytecode program** — a flat sequence of instructions plus
 capture/group metadata — and the VM executes that program against the input,
 backtracking when a path fails. This is Onigmo's model, and it is what makes
 backreferences, lookaround, and Ruby's match semantics expressible.
 
-## The program
+## The program {#the-program}
 
 A compiled pattern is a list of instructions. The instruction set is the usual
 backtracking-VM vocabulary:
@@ -24,7 +29,7 @@ backtracking-VM vocabulary:
 - **atomic / cut** — drop accumulated backtrack points (for `(?>…)` and
   possessive quantifiers).
 
-## Thread state and the backtrack stack
+## Thread state and the backtrack stack {#thread-state-and-the-backtrack-stack}
 
 Execution carries a small amount of mutable state — the current input position
 and the capture slots — and an explicit **backtrack stack**. When the VM reaches
@@ -37,7 +42,7 @@ Capture slots are part of what gets saved and restored on backtracking, so that
 the `MatchData` reflects the *path actually taken* to the accepting state — not
 some other path that also happened to consume the same bytes.
 
-## Leftmost-first, not leftmost-longest
+## Leftmost-first, not leftmost-longest {#leftmost-first-not-leftmost-longest}
 
 The order in which `split` prefers its branches encodes Ruby's **leftmost-first**
 semantics: the first alternative that leads to an overall match wins, even if a
@@ -46,7 +51,7 @@ leftmost-longest (POSIX) default. Because the preference order is observable in
 the result, the VM must try branches in exactly Onigmo's order to be
 byte-compatible — the match span and the captures depend on it.
 
-## The lazy-NFA + cached-DFA fast path
+## The lazy-NFA + cached-DFA fast path {#the-lazy-nfa-cached-dfa-fast-path}
 
 The backtracking VM is the **source of truth**, but for the *is-match* question on
 the subset of patterns with **no backreference, subexpression call, lookaround,
@@ -72,14 +77,14 @@ pattern *with* captures still uses this path for the is-match decision (whether 
 match exists never depends on captured text) and the backtracking VM for the actual
 submatch extraction. The two share the exact per-atom acceptance tests, so the DFA
 accepts precisely the bytes the VM does. See
-[Performance](../index.md#performance) for where this lands against C and RE2.
+[Performance]({{< relref "../_index.md#performance" >}}) for where this lands against C and RE2.
 
-## How backreferences constrain optimization
+## How backreferences constrain optimization {#how-backreferences-constrain-optimization}
 
 A `backref` instruction matches text whose value is only known **at run time**
 (it depends on what a group captured on this particular path). That dependency is
 why an automaton cannot represent the pattern at all, and it also limits what the
 VM may safely memoize: a `(instruction, position)` memo entry is only valid when
 the outcome does not depend on captured text. The
-[ReDoS hardening](redos.md) page covers how memoization is applied where it is
+[ReDoS hardening]({{< relref "redos.md" >}}) page covers how memoization is applied where it is
 sound and how a deterministic budget bounds the rest.
