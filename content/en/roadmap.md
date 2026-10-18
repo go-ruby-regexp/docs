@@ -1,4 +1,9 @@
-# Roadmap (phases)
+---
+title: "Roadmap (phases)"
+weight: 80
+---
+
+# Roadmap (phases) {#roadmap-phases}
 
 `go-ruby-regexp/regexp` is grown **test-first**, one capability at a time, each phase
 differential-tested against Onigmo/MRI rather than built in isolation. There are
@@ -15,7 +20,7 @@ adapter that consumes this engine, not part of this module.
 | 4 | ReDoS hardening & optimizer | `(pc, sp)` memoization, a deterministic step budget, a recursion-depth cap, and a wall-clock `WithTimeout`; a transparent start-position / required-interior-literal prefilter (up to ~210× faster); a **lazy-NFA + cached-DFA** fast path that beats C Onigmo on literal/alternation/structured scans and pulls the inner loops to **~1.6–5× of C** (`email` ≈ RE2); a benchmark suite. | **Done** |
 | 5 | Ruby surface | The full Ruby `Regexp`/`MatchData` surface via the go-embedded-ruby adapter, and the replacement DSL (`\1`, `\k<>`, `\&`, blocks). **Downstream** — lives in the adapter, not this module. | Downstream |
 
-## Documented out-of-scope boundaries
+## Documented out-of-scope boundaries {#documented-out-of-scope-boundaries}
 
 These are **deliberate** divergences from MRI/Onigmo, recorded so the engine's
 surface is unambiguous:
@@ -36,6 +41,6 @@ surface is unambiguous:
 - **Variable-width lookbehind** is rejected (a constant or bounded per-alternative
   width is required), matching Onigmo.
 
-See the [Architecture overview](architecture/index.md) for the pipeline these
-phases build out, and [ReDoS hardening](architecture/redos.md) for the Phase 4
+See the [Architecture overview]({{< relref "architecture/_index.md" >}}) for the pipeline these
+phases build out, and [ReDoS hardening]({{< relref "architecture/redos.md" >}}) for the Phase 4
 threat model.

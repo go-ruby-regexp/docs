@@ -1,4 +1,9 @@
-# ReDoS hardening
+---
+title: "ReDoS hardening"
+weight: 60
+---
+
+# ReDoS hardening {#redos-hardening}
 
 A backtracking VM is the price of Ruby compatibility, and the bill comes due as
 **ReDoS** — regular-expression denial of service. Certain patterns
@@ -7,7 +12,7 @@ backtracker explore an exponential number of paths. `go-ruby-regexp/regexp` trea
 this as a first-class concern and mitigates it the way Ruby ≥3.2 does, rather
 than relying on the caller to defend itself.
 
-## Threat model
+## Threat model {#threat-model}
 
 The danger is not malformed input crashing the engine; it is a **pattern and
 input pair that runs for an unbounded time**. This matters most when either the
@@ -16,20 +21,20 @@ catastrophic pattern, or an input that triggers catastrophic backtracking in an
 existing pattern, can hang a request thread. The engine must therefore guarantee
 that *every* match terminates within a bounded amount of work.
 
-## Mitigations
+## Mitigations {#mitigations}
 
-### Memoization where it is sound
+### Memoization where it is sound {#memoization-where-it-is-sound}
 
 The VM memoizes `(instruction, input-position)` pairs so that a path it has
 already proven to fail is not re-explored. For a large class of patterns this
 collapses the exponential search back to polynomial work. Memoization is applied
 **only where it is safe** — specifically, where the outcome does not depend on
-captured text. A subpattern that contains a [backreference](vm.md#how-backreferences-constrain-optimization)
+captured text. A subpattern that contains a [backreference]({{< relref "vm.md#how-backreferences-constrain-optimization" >}})
 cannot be memoized on position alone, because the same `(instruction, position)`
 can succeed or fail depending on what was captured; those regions fall back to
 the budget.
 
-### A deterministic step budget
+### A deterministic step budget {#a-deterministic-step-budget}
 
 Independently of memoization, the VM carries a **backtrack-step budget**. Each
 unit of backtracking work decrements it; when it is exhausted the match is
@@ -40,7 +45,7 @@ reproducible across runs and platforms — not dependent on wall-clock jitter. A
 **recursion-depth cap** bounds subexpression calls (`\g<…>`) the same way, so a
 non-terminating recursive grammar fails locally instead of exhausting the stack.
 
-### A wall-clock timeout
+### A wall-clock timeout {#a-wall-clock-timeout}
 
 `re.WithTimeout(d)` returns a *copy* of the `Regexp` that aborts any single match
 exceeding `d` of real time (Ruby's `Regexp.timeout` equivalent) — the real-time
@@ -51,7 +56,7 @@ monotonic clock only once every 4096 steps, so a search with no deadline pays
 nothing. A pathological pattern is bounded by whichever of the budget or the
 deadline it reaches first.
 
-## Never rely on a host watchdog alone
+## Never rely on a host watchdog alone {#never-rely-on-a-host-watchdog-alone}
 
 A common but fragile approach is to run the match on a goroutine and kill it from
 the outside. That is **not** sufficient here: a goroutine cannot be forcibly

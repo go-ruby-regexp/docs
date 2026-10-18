@@ -1,17 +1,22 @@
-# Architecture overview
+---
+title: "Architecture"
+weight: 30
+---
+
+# Architecture overview {#architecture-overview}
 
 `go-ruby-regexp/regexp` is a compiler **and** a virtual machine. A pattern is parsed
 into an abstract syntax tree, the AST is lowered to a bytecode program, and that
 program is executed by a backtracking VM against the input to produce
 `MatchData`. The model is Onigmo's — a backtracking matcher — see
-[Why a backtracking engine](../why.md) for the reasoning. The backtracker is the
+[Why a backtracking engine]({{< relref "../why.md" >}}) for the reasoning. The backtracker is the
 **source of truth** for every feature and for submatch extraction; a **lazy-NFA +
 cached-DFA** fast path (RE2-style) is layered over it for the
 capture/backref/lookaround-free *is-match* subset, where it now runs within
 **~1.6–5× of C Onigmo** and beats it outright on literal/alternation/structured
-scans (see [Performance](../index.md#performance)).
+scans (see [Performance]({{< relref "../_index.md#performance" >}})).
 
-## The pipeline
+## The pipeline {#the-pipeline}
 
 ```text
 pattern (string, encoding, flags)
@@ -40,7 +45,7 @@ Each stage has a single responsibility:
 - **VM** executes the program with a backtrack stack, memoization, and a step
   budget, producing `MatchData`.
 
-## Packages
+## Packages {#packages}
 
 The engine (`github.com/go-ruby-regexp/regexp`) is organized as a chain of small
 packages mirroring the pipeline, plus the public API:
@@ -55,10 +60,10 @@ packages mirroring the pipeline, plus the public API:
 | `regexp.go` | public API: `Compile` / `CompileEnc`, `Match` / `MatchString`, `WithTimeout`, `Encoding`, and `MatchData` (spans by index and name) |
 
 The detail pages cover the load-bearing pieces:
-[Syntax & parser](syntax.md), the [Backtracking VM](vm.md), and
-[ReDoS hardening](redos.md).
+[Syntax & parser]({{< relref "syntax.md" >}}), the [Backtracking VM]({{< relref "vm.md" >}}), and
+[ReDoS hardening]({{< relref "redos.md" >}}).
 
-## Relationship to go-embedded-ruby
+## Relationship to go-embedded-ruby {#relationship-to-go-embedded-ruby}
 
 The engine is **standalone**: it has no dependency on the Ruby runtime, and any
 Go program can import `github.com/go-ruby-regexp/regexp` directly. The dependency runs

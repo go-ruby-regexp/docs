@@ -1,10 +1,15 @@
-# Contributing
+---
+title: "Contributing"
+weight: 100
+---
+
+# Contributing {#contributing}
 
 Contributions are welcome. `go-ruby-regexp/regexp` is built to a small set of
 non-negotiable rules — they are what keep the engine pure-Go, correct, and
 Ruby-compatible. Please read these before opening a pull request.
 
-## Hard rules
+## Hard rules {#hard-rules}
 
 - **Build from source — no vendoring.** Everything compiles from source. Do not
   reach for prebuilt binaries or vendored blobs as a shortcut; being able to
@@ -24,20 +29,20 @@ Ruby-compatible. Please read these before opening a pull request.
 - **The ReDoS budget always terminates.** Every match must finish within the
   deterministic timeout/step budget. A change that can make matching run
   unbounded is a bug, no matter how fast the common case is — see
-  [ReDoS hardening](architecture/redos.md).
+  [ReDoS hardening]({{< relref "architecture/redos.md" >}}).
 
-## Workflow
+## Workflow {#workflow}
 
 1. Pick or open an issue describing the change.
 2. Work test-first: add the differential / unit tests, then make them pass.
 3. Run the full suite with coverage and confirm the gate is green.
 4. Open a PR in English, referencing the issue.
 
-## Where things live
+## Where things live {#where-things-live}
 
 The engine — scanner/parser, compiler, backtracking VM, and the public API — is
 in [`github.com/go-ruby-regexp/regexp`](https://github.com/go-ruby-regexp/regexp). This
 documentation site is in
 [`github.com/go-ruby-regexp/docs`](https://github.com/go-ruby-regexp/docs). Start from the
-[Architecture overview](architecture/index.md) and the [Roadmap](roadmap.md) to
+[Architecture overview]({{< relref "architecture/_index.md" >}}) and the [Roadmap]({{< relref "roadmap.md" >}}) to
 find the right place for your change.
